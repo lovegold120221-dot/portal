@@ -1,7 +1,9 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
+import { useEffect } from 'react'
 import { CaretSortIcon, CheckIcon } from '@radix-ui/react-icons'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useUser } from '@clerk/react'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -60,10 +62,21 @@ const defaultValues: Partial<AccountFormValues> = {
 }
 
 export function AccountForm() {
+  const { user, isLoaded } = useUser()
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
     defaultValues,
   })
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      form.reset({
+        name: user.fullName || user.username || '',
+        dob: undefined,
+        language: 'en',
+      })
+    }
+  }, [isLoaded, user, form])
 
   function onSubmit(data: AccountFormValues) {
     showSubmittedData(data)

@@ -10,15 +10,15 @@ vi.mock('@/lib/show-submitted-data', () => ({ showSubmittedData: vi.fn() }))
 
 const MOCK_USER: User = {
   id: 'user-delete-test',
-  firstName: 'John',
-  lastName: 'Doe',
+  first_name: 'John',
+  last_name: 'Doe',
   username: 'john_doe',
   email: 'johndoe@shadcn-admin.com',
-  phoneNumber: '+959123456789',
+  phone_number: '+959123456789',
   status: 'active',
-  role: 'manager',
-  createdAt: new Date('2026-01-01'),
-  updatedAt: new Date('2026-02-02'),
+  role: 'admin',
+  created_at: new Date('2026-01-01'),
+  updated_at: new Date('2026-02-02'),
 }
 
 describe('UsersDeleteDialog', () => {

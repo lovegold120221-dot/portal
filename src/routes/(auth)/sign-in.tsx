@@ -1,12 +1,10 @@
-import { z } from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { SignIn } from '@/features/auth/sign-in'
-
-const searchSchema = z.object({
-  redirect: z.string().optional(),
-})
+import { SignIn } from '@clerk/react'
 
 export const Route = createFileRoute('/(auth)/sign-in')({
-  component: SignIn,
-  validateSearch: searchSchema,
+  component: () => (
+    <div className='grid min-h-svh place-items-center p-4'>
+      <SignIn />
+    </div>
+  ),
 })

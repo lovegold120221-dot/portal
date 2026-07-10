@@ -1,11 +1,7 @@
 import { type ReactNode } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -32,15 +28,32 @@ import {
   type NavLink,
   type NavGroup as NavGroupProps,
 } from './types'
+import type { ChatUser } from '@/features/chats/data/chat-types'
+import { conversations as rawConversations } from '@/features/chats/data/convo.json'
+
+const conversations = rawConversations as ChatUser[]
+const totalChatMessages = conversations.reduce(
+  (sum, user) => sum + user.messages.length,
+  0
+)
 
 export function NavGroup({ title, items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
   const href = useLocation({ select: (location) => location.href })
+
+  // Apply dynamic badge to Chats item
+  const itemsWithBadges = items.map((item) => {
+    if (item.title === 'Chats' && totalChatMessages > 0) {
+      return { ...item, badge: String(totalChatMessages) }
+    }
+    return item
+  })
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => {
+        {itemsWithBadges.map((item) => {
           const key = `${item.title}-${item.url}`
 
           if (!item.items)

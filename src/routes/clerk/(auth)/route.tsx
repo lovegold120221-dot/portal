@@ -17,8 +17,8 @@ function ClerkAuthLayout() {
           to='/'
           className='relative z-20 flex items-center text-lg font-medium'
         >
-          <Logo className='me-2' />
-          Shadcn Admin
+          <Logo className='me-2 size-8' />
+          Eburon AI
         </Link>
 
         <ClerkFullLogo className='relative m-auto size-96' />
@@ -26,10 +26,10 @@ function ClerkAuthLayout() {
         <div className='relative z-20 mt-auto'>
           <blockquote className='space-y-2'>
             <p className='text-lg'>
-              &ldquo; Lorem ipsum dolor sit amet consectetur adipisicing elit.
-              Sint, magni debitis inventore asperiores velit! &rdquo;
+              Secure access for your team, with a clean workspace ready for real
+              work.
             </p>
-            <footer className='text-sm'>John Doe</footer>
+            <footer className='text-sm'>Eburon</footer>
           </blockquote>
         </div>
       </div>

@@ -6,10 +6,10 @@ import { type User } from '../data/schema'
 import { UsersActionDialog } from './users-action-dialog'
 
 const VALIDATION_MESSAGES = {
-  firstName: 'First Name is required.',
-  lastName: 'Last Name is required.',
+  first_name: 'First Name is required.',
+  last_name: 'Last Name is required.',
   username: 'Username is required.',
-  phoneNumber: 'Phone number is required.',
+  phone_number: 'Phone number is required.',
   email: 'Email is required.',
   role: 'Role is required.',
   password: 'Password is required.',
@@ -21,15 +21,15 @@ const VALIDATION_MESSAGES = {
 
 const MOCK_USER: User = {
   id: 'alex_uuid',
-  firstName: 'Alex',
-  lastName: 'Smith',
+  first_name: 'Alex',
+  last_name: 'Smith',
   username: 'alex_smith',
   email: 'alex@smith.com',
-  phoneNumber: '+19999999999',
+  phone_number: '+19999999999',
   status: 'active',
-  role: 'superadmin',
-  createdAt: new Date('2026-01-01'),
-  updatedAt: new Date('2026-02-02'),
+  role: 'admin',
+  created_at: new Date('2026-01-01'),
+  updated_at: new Date('2026-02-02'),
 }
 
 vi.mock('@/lib/show-submitted-data', () => ({ showSubmittedData: vi.fn() }))
@@ -64,16 +64,16 @@ describe('UsersActionDialog', () => {
       await userEvent.click(submitButton)
 
       await expect
-        .element(getByText(VALIDATION_MESSAGES.firstName))
+        .element(getByText(VALIDATION_MESSAGES.first_name))
         .toBeInTheDocument()
       await expect
-        .element(getByText(VALIDATION_MESSAGES.lastName))
+        .element(getByText(VALIDATION_MESSAGES.last_name))
         .toBeInTheDocument()
       await expect
         .element(getByText(VALIDATION_MESSAGES.username))
         .toBeInTheDocument()
       await expect
-        .element(getByText(VALIDATION_MESSAGES.phoneNumber))
+        .element(getByText(VALIDATION_MESSAGES.phone_number))
         .toBeInTheDocument()
       await expect
         .element(getByText(VALIDATION_MESSAGES.email))
@@ -171,12 +171,12 @@ describe('UsersActionDialog', () => {
 
       expect(showSubmittedData).toHaveBeenCalledOnce()
       expect(showSubmittedData).toHaveBeenCalledWith({
-        firstName: MOCK_USER.firstName,
-        lastName: MOCK_USER.lastName,
+        first_name: MOCK_USER.first_name,
+        last_name: MOCK_USER.last_name,
         username: MOCK_USER.username,
         email: MOCK_USER.email,
         role: MOCK_USER.role,
-        phoneNumber: MOCK_USER.phoneNumber,
+        phone_number: MOCK_USER.phone_number,
         password: 'S3cur3P@ssw0rd',
         confirmPassword: 'S3cur3P@ssw0rd',
         isEdit: false,
@@ -220,11 +220,11 @@ describe('UsersActionDialog', () => {
 
       expect(showSubmittedData).toHaveBeenCalledOnce()
       expect(showSubmittedData).toHaveBeenCalledWith({
-        firstName: MOCK_USER.firstName,
-        lastName: MOCK_USER.lastName,
+        first_name: MOCK_USER.first_name,
+        last_name: MOCK_USER.last_name,
         username: MOCK_USER.username,
         email: MOCK_USER.email,
-        phoneNumber: MOCK_USER.phoneNumber,
+        phone_number: MOCK_USER.phone_number,
         role: MOCK_USER.role,
         password: '',
         confirmPassword: '',
@@ -285,11 +285,11 @@ describe('UsersActionDialog', () => {
 
       expect(showSubmittedData).toHaveBeenCalledOnce()
       expect(showSubmittedData).toHaveBeenCalledWith({
-        firstName: EDIT_SUCCESS_FIRST_NAME,
-        lastName: MOCK_USER.lastName,
+        first_name: EDIT_SUCCESS_FIRST_NAME,
+        last_name: MOCK_USER.last_name,
         username: MOCK_USER.username,
         email: MOCK_USER.email,
-        phoneNumber: MOCK_USER.phoneNumber,
+        phone_number: MOCK_USER.phone_number,
         role: MOCK_USER.role,
         password: EDIT_SUCCESS_PASSWORD,
         confirmPassword: EDIT_SUCCESS_PASSWORD,
@@ -303,20 +303,20 @@ async function fillRequiredProfileFields(
   user: UserEvent,
   screen: RenderResult,
   overrides?: {
-    firstName?: string
-    lastName?: string
+    first_name?: string
+    last_name?: string
     username?: string
     email?: string
     roleOption?: string | RegExp
-    phoneNumber?: string
+    phone_number?: string
   }
 ) {
   const entries = [
-    [/first name/i, overrides?.firstName ?? 'John'],
-    [/last name/i, overrides?.lastName ?? 'Doe'],
+    [/first name/i, overrides?.first_name ?? 'John'],
+    [/last name/i, overrides?.last_name ?? 'Doe'],
     [/username/i, overrides?.username ?? 'john_doe'],
     [/^email$/i, overrides?.email ?? 'a@b.co'],
-    [/phone number/i, overrides?.phoneNumber ?? '+19999999999'],
+    [/phone number/i, overrides?.phone_number ?? '+19999999999'],
   ] as const
 
   for (const [label, value] of entries) {

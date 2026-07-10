@@ -128,7 +128,7 @@ describe('UsersInviteDialog', () => {
     )
 
     const EMAIL_VALUE = 'test@example.com'
-    const ROLE_VALUE = 'superadmin'
+    const ROLE_VALUE = 'admin'
     const DESC_VALUE = 'Welcome aboard!'
 
     const emailInput = getByRole('textbox', { name: /Email/i })

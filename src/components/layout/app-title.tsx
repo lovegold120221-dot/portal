@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Logo } from '@/assets/logo'
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -16,17 +17,22 @@ export function AppTitle() {
       <SidebarMenuItem>
         <SidebarMenuButton
           size='lg'
-          className='gap-0 py-0 hover:bg-transparent active:bg-transparent'
+          className='gap-3 py-1 hover:bg-transparent active:bg-transparent'
           asChild
         >
           <div>
             <Link
               to='/'
               onClick={() => setOpenMobile(false)}
-              className='grid flex-1 text-start text-sm leading-tight'
+              className='flex items-center gap-3'
             >
-              <span className='truncate font-bold'>Shadcn-Admin</span>
-              <span className='truncate text-xs'>Vite + ShadcnUI</span>
+              <div className='flex aspect-square size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground'>
+                <Logo className='size-5 shrink-0' />
+              </div>
+              <div className='grid flex-1 text-start text-sm leading-tight'>
+                <span className='truncate font-bold'>Eburon AI</span>
+                <span className='truncate text-xs'>Next-Gen Admin</span>
+              </div>
             </Link>
             <ToggleSidebar />
           </div>

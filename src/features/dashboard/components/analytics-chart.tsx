@@ -1,44 +1,16 @@
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 
-const data = [
-  {
-    name: 'Mon',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Tue',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Wed',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Thu',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Fri',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Sat',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Sun',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-]
+const data: Array<{ name: string; clicks: number; uniques: number }> = []
 
 export function AnalyticsChart() {
+  if (data.length === 0) {
+    return (
+      <div className='flex h-[300px] items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground'>
+        Analytics data will appear here once available.
+      </div>
+    )
+  }
+
   return (
     <ResponsiveContainer width='100%' height={300}>
       <AreaChart data={data}>

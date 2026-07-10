@@ -1,6 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { SignUp } from '@/features/auth/sign-up'
+import { SignUp } from '@clerk/react'
 
 export const Route = createFileRoute('/(auth)/sign-up')({
-  component: SignUp,
+  component: () => (
+    <div className='grid min-h-svh place-items-center p-4'>
+      <SignUp />
+    </div>
+  ),
 })

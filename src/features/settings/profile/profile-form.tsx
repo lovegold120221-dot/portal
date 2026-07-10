@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import { z } from 'zod'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
+import { useUser } from '@clerk/react'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -49,19 +51,33 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>
 
 // This can come from your database or API.
 const defaultValues: Partial<ProfileFormValues> = {
-  bio: 'I own a computer.',
-  urls: [
-    { value: 'https://shadcn.com' },
-    { value: 'http://twitter.com/shadcn' },
-  ],
+  bio: '',
+  urls: [],
 }
 
 export function ProfileForm() {
+  const { user, isLoaded } = useUser()
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues,
     mode: 'onChange',
   })
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      form.reset({
+        username: user.username || '',
+        email: user.primaryEmailAddress?.emailAddress ?? '',
+        bio: '',
+        urls: user.externalAccounts?.length
+          ? user.externalAccounts
+              .map((acc) => acc.username)
+              .filter(Boolean)
+              .map((u) => ({ value: `https://${u}` }))
+          : [],
+      })
+    }
+  }, [isLoaded, user, form])
 
   const { fields, append } = useFieldArray({
     name: 'urls',
@@ -81,7 +97,7 @@ export function ProfileForm() {
             <FormItem>
               <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input placeholder='shadcn' {...field} />
+                <Input placeholder='Eburon' {...field} />
               </FormControl>
               <FormDescription>
                 This is your public display name. It can be your real name or a

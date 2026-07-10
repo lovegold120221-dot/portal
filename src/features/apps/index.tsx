@@ -1,8 +1,47 @@
-import { type ChangeEvent, useState } from 'react'
-import { getRouteApi } from '@tanstack/react-router'
-import { SlidersHorizontal, ArrowUpAZ, ArrowDownAZ } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  ArrowLeft,
+  AudioLines,
+  BarChart3,
+  Bot,
+  Boxes,
+  Brain,
+  Code2,
+  Database,
+  Download,
+  ExternalLink,
+  Eye,
+  GraduationCap,
+  LayoutDashboard,
+  MessageSquare,
+  Mic,
+  Network,
+  Orbit,
+  PanelRightOpen,
+  Scan,
+  ScanText,
+  Plus,
+  Puzzle,
+  Shield,
+  Sparkles,
+  Smartphone,
+  Users,
+  Workflow,
+  X,
+} from 'lucide-react'
+import { getApps, addApp } from '@/lib/supabase-apps'
+import { getServices, setServiceConnected } from '@/lib/supabase-queries'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -11,79 +50,258 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from '@/components/ui/tooltip'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { apps } from './data/apps'
+import type { Service } from '@/features/apps/data/services'
+import type { User } from '@/features/users/data/schema'
+import { users as allUsers } from '@/features/users/data/users'
+import { eburonApps as defaultApps, type EburonApp } from './data/apps'
 
-const route = getRouteApi('/_authenticated/apps/')
+type Tab = 'apps' | 'services'
 
-type AppType = 'all' | 'connected' | 'notConnected'
+const iconOptions = [
+  { name: 'Brain', icon: <Brain className='size-5' /> },
+  { name: 'Code2', icon: <Code2 className='size-5' /> },
+  { name: 'Mic', icon: <Mic className='size-5' /> },
+  { name: 'Eye', icon: <Eye className='size-5' /> },
+  { name: 'Workflow', icon: <Workflow className='size-5' /> },
+  { name: 'Shield', icon: <Shield className='size-5' /> },
+  { name: 'BarChart3', icon: <BarChart3 className='size-5' /> },
+  { name: 'MessageSquare', icon: <MessageSquare className='size-5' /> },
+  { name: 'Sparkles', icon: <Sparkles className='size-5' /> },
+  { name: 'PanelRightOpen', icon: <PanelRightOpen className='size-5' /> },
+  { name: 'Bot', icon: <Bot className='size-5' /> },
+  { name: 'GraduationCap', icon: <GraduationCap className='size-5' /> },
+  { name: 'AudioLines', icon: <AudioLines className='size-5' /> },
+  { name: 'Database', icon: <Database className='size-5' /> },
+  { name: 'Boxes', icon: <Boxes className='size-5' /> },
+  { name: 'Network', icon: <Network className='size-5' /> },
+  { name: 'Orbit', icon: <Orbit className='size-5' /> },
+  { name: 'Scan', icon: <Scan className='size-5' /> },
+  { name: 'ScanText', icon: <ScanText className='size-5' /> },
+]
 
-const appText = new Map<AppType, string>([
-  ['all', 'All Apps'],
-  ['connected', 'Connected'],
-  ['notConnected', 'Not Connected'],
-])
+const colorOptions = [
+  {
+    value:
+      'bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300',
+    label: 'Violet',
+  },
+  {
+    value: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+    label: 'Blue',
+  },
+  {
+    value:
+      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
+    label: 'Emerald',
+  },
+  {
+    value: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+    label: 'Amber',
+  },
+  {
+    value: 'bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300',
+    label: 'Rose',
+  },
+  {
+    value: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+    label: 'Red',
+  },
+  {
+    value: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300',
+    label: 'Cyan',
+  },
+  {
+    value:
+      'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300',
+    label: 'Indigo',
+  },
+  {
+    value:
+      'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+    label: 'Yellow',
+  },
+  {
+    value: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+    label: 'Slate',
+  },
+]
+
+const defaultDownloads = [
+  { label: 'macOS (Apple Silicon)', url: null },
+  { label: 'macOS (Intel)', url: null },
+  { label: 'Debian / Ubuntu', url: null },
+  { label: 'Windows', url: null },
+  { label: 'APK', url: null },
+]
+
+const statusColors: Record<string, string> = {
+  Stable:
+    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
+  Beta: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+  Alpha:
+    'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+}
+
+const emilAlvaro = allUsers.find(
+  (u) => u.email === 'emil.alvaro@eburon.ai'
+)
+
+const devUsers = allUsers.filter(
+  (u) => u.role === 'developer' || u.role === 'admin'
+)
 
 export function Apps() {
-  const {
-    filter = '',
-    type = 'all',
-    sort: initSort = 'asc',
-  } = route.useSearch()
-  const navigate = route.useNavigate()
-
-  const [sort, setSort] = useState(initSort)
-  const [appType, setAppType] = useState(type)
-  const [searchTerm, setSearchTerm] = useState(filter)
-
-  const filteredApps = apps
-    .sort((a, b) =>
-      sort === 'asc'
-        ? a.name.localeCompare(b.name)
-        : b.name.localeCompare(a.name)
+  const [tab, setTab] = useState<Tab>('apps')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedPlatform, setSelectedPlatform] = useState<string>(
+    'macOS (Apple Silicon)'
+  )
+  const [apps, setApps] = useState(defaultApps)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newDesc, setNewDesc] = useState('')
+  const [newUrl, setNewUrl] = useState('')
+  const [newIcon, setNewIcon] = useState(iconOptions[0].name)
+  const [newColor, setNewColor] = useState(colorOptions[0].value)
+  const [selectedApp, setSelectedApp] = useState<EburonApp | null>(null)
+  const [services, setServices] = useState<Service[]>([])
+  const [loadingServices, setLoadingServices] = useState(true)
+  const [appAssignees, setAppAssignees] = useState<Record<string, User[]>>(
+    Object.fromEntries(
+      defaultApps.map((app) => [
+        app.name,
+        emilAlvaro ? [emilAlvaro] : [],
+      ])
     )
-    .filter((app) =>
-      appType === 'connected'
-        ? app.connected
-        : appType === 'notConnected'
-          ? !app.connected
-          : true
+  )
+
+  useEffect(() => {
+    let active = true
+    Promise.all([getServices(), getApps()]).then(([svcData, appData]) => {
+      if (!active) return
+      setServices(svcData)
+      setApps(appData)
+      setAppAssignees((prev) => {
+        const next = { ...prev }
+        appData.forEach((app) => {
+          if (!next[app.name]) {
+            next[app.name] = emilAlvaro ? [emilAlvaro] : []
+          }
+        })
+        return next
+      })
+      setLoadingServices(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const handleConnect = async (slug: string) => {
+    const next = !services.find((s) => s.slug === slug)?.connected
+    setServices((prev) =>
+      prev.map((s) => (s.slug === slug ? { ...s, connected: next } : s))
     )
+    await setServiceConnected(slug, next)
+  }
+
+  const toggleAssignUser = (appName: string, user: User) => {
+    setAppAssignees((prev) => {
+      const current = prev[appName] || []
+      const exists = current.some((u) => u.id === user.id)
+      return {
+        ...prev,
+        [appName]: exists
+          ? current.filter((u) => u.id !== user.id)
+          : [...current, user],
+      }
+    })
+  }
+
+  const filteredApps = [...apps]
     .filter((app) => app.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name))
 
-  const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value)
-    navigate({
-      search: (prev) => ({
-        ...prev,
-        filter: e.target.value || undefined,
-      }),
-    })
+  const filteredServices = services
+    .filter((app) => app.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newName.trim()) return
+    const iconEl =
+      iconOptions.find((i) => i.name === newIcon)?.icon ?? iconOptions[0].icon
+    const newApp: EburonApp = {
+      name: newName.trim(),
+      logo: iconEl,
+      icon: newIcon,
+      desc: newDesc.trim(),
+      color: newColor,
+      url:
+        newUrl.trim() ||
+        `https://eburon.ai/${newName.trim().toLowerCase().replace(/\s+/g, '-')}`,
+      downloads: defaultDownloads,
+    }
+    setApps((prev) => [...prev, newApp])
+    setAppAssignees((prev) => ({
+      ...prev,
+      [newApp.name]: emilAlvaro ? [emilAlvaro] : [],
+    }))
+    addApp(newApp)
+    setNewName('')
+    setNewDesc('')
+    setNewUrl('')
+    setNewIcon(iconOptions[0].name)
+    setNewColor(colorOptions[0].value)
+    setDialogOpen(false)
   }
 
-  const handleTypeChange = (value: AppType) => {
-    setAppType(value)
-    navigate({
-      search: (prev) => ({
-        ...prev,
-        type: value === 'all' ? undefined : value,
-      }),
-    })
+  // The closeDetails helper: resets the detail view
+  const closeDetails = () => {
+    setSelectedApp(null)
   }
 
-  const handleSortChange = (sort: 'asc' | 'desc') => {
-    setSort(sort)
-    navigate({ search: (prev) => ({ ...prev, sort }) })
+  // ── Detail View (full content area) ──────────────────────
+  if (selectedApp) {
+    return (
+      <>
+        <Header>
+          <Search className='me-auto' />
+          <ThemeSwitch />
+          <ConfigDrawer />
+          <ProfileDropdown />
+        </Header>
+        <Main fixed>
+          <AppDetailsPanel
+            app={selectedApp}
+            statusColors={statusColors}
+            devUsers={devUsers}
+            appAssignees={appAssignees}
+            onToggleAssign={toggleAssignUser}
+            onClose={closeDetails}
+          />
+        </Main>
+      </>
+    )
   }
 
+  // ── List View (no app selected) ──────────────────────────
   return (
     <>
-      {/* ===== Top Heading ===== */}
       <Header>
         <Search className='me-auto' />
         <ThemeSwitch />
@@ -91,87 +309,591 @@ export function Apps() {
         <ProfileDropdown />
       </Header>
 
-      {/* ===== Content ===== */}
       <Main fixed>
-        <div>
-          <h1 className='text-2xl font-bold tracking-tight'>
-            App Integrations
-          </h1>
-          <p className='text-muted-foreground'>
-            Here&apos;s a list of your apps for the integration!
-          </p>
-        </div>
-        <div className='my-4 flex items-end justify-between sm:my-0 sm:items-center'>
-          <div className='flex flex-col gap-4 sm:my-4 sm:flex-row'>
-            <Input
-              placeholder='Filter apps...'
-              className='h-9 w-40 lg:w-62.5'
-              value={searchTerm}
-              onChange={handleSearch}
-            />
-            <Select value={appType} onValueChange={handleTypeChange}>
-              <SelectTrigger className='w-36'>
-                <SelectValue>{appText.get(appType)}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All Apps</SelectItem>
-                <SelectItem value='connected'>Connected</SelectItem>
-                <SelectItem value='notConnected'>Not Connected</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className='flex items-center justify-between'>
+          <div>
+            <h1 className='text-2xl font-bold tracking-tight'>Eburon Apps</h1>
+            <p className='text-muted-foreground'>
+              Your Eburon ecosystem apps and third-party service integrations.
+            </p>
           </div>
-
-          <Select value={sort} onValueChange={handleSortChange}>
-            <SelectTrigger className='w-16'>
-              <SelectValue>
-                <SlidersHorizontal size={18} />
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent align='end'>
-              <SelectItem value='asc'>
-                <div className='flex items-center gap-4'>
-                  <ArrowUpAZ size={16} />
-                  <span>Ascending</span>
-                </div>
-              </SelectItem>
-              <SelectItem value='desc'>
-                <div className='flex items-center gap-4'>
-                  <ArrowDownAZ size={16} />
-                  <span>Descending</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
         </div>
-        <Separator className='shadow-sm' />
-        <ul className='faded-bottom no-scrollbar grid gap-4 overflow-auto pt-4 pb-16 md:grid-cols-2 lg:grid-cols-3'>
-          {filteredApps.map((app) => (
-            <li
-              key={app.name}
-              className='rounded-lg border p-4 hover:shadow-md'
+
+        <div className='mt-6'>
+          <Tabs
+            value={tab}
+            onValueChange={(v) => setTab(v as Tab)}
+            className='space-y-4'
+          >
+            <div className='sticky top-0 z-10 -mx-6 flex items-center justify-between bg-background px-6 py-2'>
+              <TabsList>
+                <TabsTrigger value='apps' className='gap-2'>
+                  <LayoutDashboard className='size-4' />
+                  Eburon Apps
+                </TabsTrigger>
+                <TabsTrigger value='services' className='gap-2'>
+                  <Puzzle className='size-4' />
+                  Services
+                </TabsTrigger>
+              </TabsList>
+              <div className='flex items-center gap-2'>
+                <Input
+                  placeholder={`Search ${tab === 'apps' ? 'apps' : 'services'}...`}
+                  className='h-9 w-60'
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size='sm' className='h-9 gap-1.5'>
+                      <Plus className='size-4' />
+                      Add App
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className='sm:max-w-md'>
+                    <DialogHeader>
+                      <DialogTitle>Add New App</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit} className='space-y-4'>
+                      <div className='space-y-2'>
+                        <Label htmlFor='name'>App Name</Label>
+                        <Input
+                          id='name'
+                          placeholder='e.g. Eburon Analytics'
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className='space-y-2'>
+                        <Label htmlFor='desc'>Description</Label>
+                        <Input
+                          id='desc'
+                          placeholder='What does this app do?'
+                          value={newDesc}
+                          onChange={(e) => setNewDesc(e.target.value)}
+                        />
+                      </div>
+                      <div className='space-y-2'>
+                        <Label htmlFor='url'>Website URL</Label>
+                        <Input
+                          id='url'
+                          placeholder='https://eburon.ai/my-app'
+                          value={newUrl}
+                          onChange={(e) => setNewUrl(e.target.value)}
+                        />
+                      </div>
+                      <div className='space-y-2'>
+                        <Label>Icon</Label>
+                        <div className='flex flex-wrap gap-2'>
+                          {iconOptions.map((opt) => (
+                            <button
+                              key={opt.name}
+                              type='button'
+                              onClick={() => setNewIcon(opt.name)}
+                              className={`flex size-10 items-center justify-center rounded-lg border ${
+                                newIcon === opt.name
+                                  ? 'border-primary bg-primary/10 ring-2 ring-primary'
+                                  : 'border-border hover:bg-accent'
+                              }`}
+                            >
+                              {opt.icon}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className='space-y-2'>
+                        <Label>Color</Label>
+                        <div className='flex flex-wrap gap-2'>
+                          {colorOptions.map((opt) => (
+                            <button
+                              key={opt.label}
+                              type='button'
+                              onClick={() => setNewColor(opt.value)}
+                              className={`flex size-8 items-center justify-center rounded-lg border ${
+                                newColor === opt.value
+                                  ? 'ring-2 ring-primary ring-offset-2'
+                                  : 'border-border'
+                              } ${opt.value.split(' ')[0]} ${opt.value.split(' ')[1]}`}
+                            >
+                              <span className='text-[10px] font-bold'>
+                                {opt.label[0]}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className='flex justify-end gap-2 pt-2'>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          onClick={() => setDialogOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type='submit'>Add App</Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            <TabsContent
+              value='apps'
+              className='mt-0'
             >
-              <div className='mb-8 flex items-center justify-between'>
-                <div
-                  className={`flex size-10 items-center justify-center rounded-lg bg-muted p-2`}
-                >
-                  {app.logo}
+              <Separator className='shadow-sm' />
+              <div className='pt-4'>
+                <div className='max-h-[calc(100vh-360px)] overflow-y-auto'>
+                  <ul className='grid gap-4 pb-16 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'>
+                    {filteredApps.map((app) => (
+                      <li
+                        key={app.name}
+                        className='flex cursor-pointer flex-col rounded-lg border p-4 transition-all hover:shadow-md'                          onClick={() => {
+                            setSelectedApp(app)
+                          }}
+                      >
+                        <div className='mb-3 flex items-center justify-between'>
+                          <div
+                            className={`flex size-10 items-center justify-center rounded-lg ${app.color} p-2`}
+                          >
+                            {app.logo}
+                          </div>
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='size-8'
+                            asChild
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <a
+                              href={app.url}
+                              target='_blank'
+                              rel='noopener noreferrer'
+                            >
+                              <ExternalLink className='size-4' />
+                            </a>
+                          </Button>
+                        </div>
+                        <div className='mb-3 flex-1'>
+                          <h2 className='mb-1 font-semibold'>{app.name}</h2>
+                          {app.status && (
+                            <Badge
+                              variant='outline'
+                              className={`mb-2 text-[10px] ${
+                                statusColors[app.status] || ''
+                              }`}
+                            >
+                              {app.status}
+                            </Badge>
+                          )}
+                          <p className='line-clamp-2 text-sm text-muted-foreground'>
+                            {app.desc}
+                          </p>
+                        </div>
+                        <div className='flex items-center gap-2'>
+                          <Select
+                            value={selectedPlatform}
+                            onValueChange={setSelectedPlatform}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <SelectTrigger className='h-8 min-w-0 flex-[2] text-xs'>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className='w-auto min-w-[var(--radix-select-trigger-width)]'>
+                              {app.downloads.map((dl) => (
+                                <SelectItem
+                                  key={dl.label}
+                                  value={dl.label}
+                                  className='text-xs'
+                                >
+                                  {dl.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {(() => {
+                            const dl = app.downloads.find(
+                              (d) => d.label === selectedPlatform
+                            )
+                            if (!dl?.url) {
+                              return (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span tabIndex={0}>
+                                        <Button
+                                          size='sm'
+                                          className='h-8 gap-1.5 text-xs'
+                                          disabled
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <Download className='size-3.5' />
+                                          Download
+                                        </Button>
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Not available</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )
+                            }
+                            return (
+                              <Button
+                                size='sm'
+                                className='h-8 gap-1.5 text-xs'
+                                asChild
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <a href={dl.url} download>
+                                  <Download className='size-3.5' />
+                                  Download
+                                </a>
+                              </Button>
+                            )
+                          })()}
+                          <Button
+                            variant='default'
+                            size='sm'
+                            className='h-8 shrink-0 gap-1.5 text-xs'
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedApp(app)
+                            }}
+                          >
+                            <Eye className='size-3.5' />
+                            Details
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  className={`${app.connected ? 'border border-blue-300 bg-blue-50 hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-950 dark:hover:bg-blue-900' : ''}`}
-                >
-                  {app.connected ? 'Connected' : 'Connect'}
-                </Button>
               </div>
-              <div>
-                <h2 className='mb-1 font-semibold'>{app.name}</h2>
-                <p className='line-clamp-2 text-gray-500'>{app.desc}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+            </TabsContent>
+
+            <TabsContent
+              value='services'
+              className='mt-0 max-h-[calc(100vh-320px)] overflow-y-auto'
+            >
+              <Separator className='shadow-sm' />
+              {loadingServices ? (
+                <p className='py-12 text-center text-sm text-muted-foreground'>
+                  Loading integrations…
+                </p>
+              ) : (
+                <ul className='grid gap-4 pt-4 pb-16 md:grid-cols-2 lg:grid-cols-3'>
+                  {filteredServices.map((svc) => (
+                    <li
+                      key={svc.slug}
+                      className='rounded-lg border p-4 hover:shadow-md'
+                    >
+                      <div className='mb-8 flex items-center justify-between'>
+                        <div className='flex size-10 items-center justify-center rounded-lg bg-muted text-xs font-bold text-muted-foreground uppercase'>
+                          {svc.name.slice(0, 2)}
+                        </div>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            svc.availability === 'installed'
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                              : svc.availability === 'beta'
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                                : svc.availability === 'alpha'
+                                  ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          }`}
+                        >
+                          {svc.availability === 'official'
+                            ? 'Official'
+                            : svc.availability}
+                        </span>
+                      </div>
+                      <div className='mb-3'>
+                        <div className='mb-1 flex items-center gap-2'>
+                          <h2 className='font-semibold'>{svc.name}</h2>
+                          {svc.official && (
+                            <span className='text-[10px] text-muted-foreground'>
+                              · Official
+                            </span>
+                          )}
+                        </div>
+                        <p className='line-clamp-3 text-sm text-muted-foreground'>
+                          {svc.description}
+                        </p>
+                      </div>
+                      <Button
+                        variant={svc.connected ? 'secondary' : 'outline'}
+                        size='sm'
+                        className='w-full'
+                        onClick={() => handleConnect(svc.slug)}
+                      >
+                        {svc.connected ? 'Connected' : 'Connect'}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
       </Main>
     </>
+  )
+}
+
+// ─── App Details Panel ─────────────────────────────────────
+
+type AppDetailsPanelProps = {
+  app: EburonApp
+  statusColors: Record<string, string>
+  devUsers: User[]
+  appAssignees: Record<string, User[]>
+  onToggleAssign: (appName: string, user: User) => void
+  onClose: () => void
+}
+
+function AppDetailsPanel({
+  app,
+  statusColors,
+  devUsers,
+  appAssignees,
+  onToggleAssign,
+  onClose,
+}: AppDetailsPanelProps) {
+  const [comment, setComment] = useState('')
+  const [saved, setSaved] = useState(false)
+  const savedTimer = useRef<ReturnType<typeof setTimeout>>()
+
+  const handleSave = () => {
+    if (!comment.trim()) return
+    setSaved(true)
+    clearTimeout(savedTimer.current)
+    savedTimer.current = setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div className='relative flex h-full flex-col'>
+      {/* ===== Floating Header (overlays content) ===== */}
+      <div className='pointer-events-none absolute top-0 inset-x-0 z-30 flex items-center justify-between px-8 py-4'>
+        <div />
+        <div className='pointer-events-auto flex items-center gap-2'>
+          <div className='flex size-9 items-center justify-center'>
+            {app.logo}
+          </div>
+          <button
+            className='flex size-9 items-center justify-center text-muted-foreground hover:text-foreground'
+            onClick={onClose}
+          >
+            <X className='size-5' />
+          </button>
+        </div>
+      </div>
+
+      {/* ===== Scrollable Content ===== */}
+      <div className='flex-1 overflow-y-auto py-6 pl-2 pr-8 lg:overflow-hidden'>
+        <div className='flex flex-col gap-10 lg:h-full lg:flex-row lg:items-start lg:gap-12'>
+          {/* ── 📱 LEFT: Realistic Phone Mockup (sticky on desktop) ── */}
+          <div className='flex shrink-0 flex-col items-center gap-4 lg:sticky lg:top-0'>
+            <div className='relative h-[650px] w-[300px] overflow-hidden rounded-[48px] border-[12px] border-zinc-800 bg-black shadow-2xl'>
+              {/* Notch */}
+              <div className='absolute top-2.5 left-1/2 z-20 h-[30px] w-[120px] -translate-x-1/2 rounded-[22px] bg-black shadow-[inset_0_-1px_2px_rgba(255,255,255,0.08)]' />
+              {/* Screen */}
+              <div className='relative flex h-full w-full flex-col bg-[#0b0f19]'>
+                {/* Embedded URL */}
+                <iframe
+                  src={app.url}
+                  title={`${app.name} preview`}
+                  className='h-full w-full border-0'
+                  sandbox='allow-scripts'
+                  referrerPolicy='no-referrer'
+                  loading='lazy'
+                />
+                {/* Status bar overlay */}
+                <div className='pointer-events-none absolute top-0 inset-x-0 z-10 flex justify-between px-5 pt-3.5'>
+                  <span className='text-[12px] font-semibold text-white drop-shadow-sm'>
+                    9:41
+                  </span>
+                  <span className='text-[12px] text-white/90 drop-shadow-sm'>
+                    {'📶'} {'🔋'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+              <Smartphone className='size-3.5' />
+              {app.url}
+            </span>
+          </div>
+
+          {/* ── 📋 RIGHT: Stacked Cards (scrollable on desktop) ── */}
+          <div className='flex min-w-0 flex-1 flex-col gap-8 lg:overflow-y-auto lg:max-h-full'>
+            {/* App name header */}
+            <div className='flex items-center gap-3'>
+              <h1 className='text-2xl font-bold tracking-tight'>{app.name}</h1>
+            </div>
+
+            {/* Status */}
+            <div className='space-y-3'>
+              <div className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                Status
+              </div>
+              <div className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'>
+                <div
+                  className={`rounded px-3 py-1 text-xs font-semibold ${
+                    statusColors[app.status] ||
+                    'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {app.status || 'Unknown'}
+                </div>
+                <span className='text-sm text-muted-foreground'>
+                  {app.status === 'Stable'
+                    ? 'Production ready'
+                    : app.status === 'Beta'
+                      ? 'Feature complete, testing'
+                      : app.status === 'Alpha'
+                        ? 'Early development'
+                        : 'Status not set'}
+                </span>
+              </div>
+            </div>
+
+            {/* 1. Description Card */}
+            <div className='relative rounded-xl border bg-card p-6'>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='absolute top-4 right-4 size-7 text-muted-foreground hover:text-foreground'
+                onClick={onClose}
+              >
+                <X className='size-4' />
+              </Button>
+              <div className='mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                Description
+              </div>
+              <p className='mb-5 text-[15px] leading-relaxed text-foreground/90'>
+                {app.desc}
+              </p>
+              <Button
+                variant='outline'
+                className='h-9 gap-2 border-muted-foreground/20 text-xs font-medium hover:bg-accent'
+                asChild
+              >
+                <a href={app.url} target='_blank' rel='noopener noreferrer'>
+                  <ExternalLink className='size-3.5' />
+                  Open
+                </a>
+              </Button>
+            </div>
+
+            {/* 2. Developer */}
+            <div className='space-y-3'>
+              <div className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                Developer
+              </div>
+              <div className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'>
+                <div className='flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary'>
+                  EA
+                </div>
+                <span className='text-sm font-medium'>Emil Alvaro</span>
+              </div>
+            </div>
+
+            {/* 3. Assign Developers & Admins */}
+            <div className='space-y-3'>
+              <div className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                Assign Developers & Admins
+              </div>
+              <div className='flex flex-wrap gap-2'>
+                {devUsers.map((user) => {
+                  const assigned = (appAssignees[app.name] || []).some(
+                    (u) => u.id === user.id
+                  )
+                  return (
+                    <button
+                      key={user.id}
+                      onClick={() => onToggleAssign(app.name, user)}
+                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                        assigned
+                          ? 'bg-secondary text-secondary-foreground'
+                          : 'border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      }`}
+                    >
+                      {assigned && (
+                        <X className='size-3 shrink-0 opacity-60' />
+                      )}
+                      {user.first_name} {user.last_name}
+                      <span className='text-[10px] opacity-50'>({user.role})</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 4. Assigned Developers */}
+            {(appAssignees[app.name] || []).length > 0 && (
+              <div className='space-y-3'>
+                <div className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                  Assigned Developers
+                </div>
+                <div className='space-y-2'>
+                  {(appAssignees[app.name] || []).map((user) => (
+                    <div
+                      key={user.id}
+                      className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'
+                    >
+                      <div className='flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary'>
+                        {user.first_name[0]}
+                        {user.last_name[0]}
+                      </div>
+                      <div className='flex-1'>
+                        <p className='text-sm font-medium'>
+                          {user.first_name} {user.last_name}
+                        </p>
+                        <p className='text-xs text-muted-foreground'>
+                          {user.role}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 5. Testing Comment Box */}
+            <div className='space-y-3'>
+              <div className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                Testing Comment
+              </div>
+              <div className='rounded-xl border bg-card p-4'>
+                <Textarea
+                  placeholder='Add testing notes, feedback, or observations...'
+                  value={comment}
+                  onChange={(e) => {
+                    setComment(e.target.value)
+                    if (saved) setSaved(false)
+                  }}
+                  className='min-h-[100px] resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0'
+                />
+                <div className='mt-3 flex items-center justify-between border-t pt-3'>
+                  <span className='text-xs text-muted-foreground'>
+                    {saved ? 'Comment saved!' : ''}
+                  </span>
+                  <Button
+                    size='sm'
+                    className='h-8 gap-1.5 text-xs'
+                    onClick={handleSave}
+                    disabled={!comment.trim()}
+                  >
+                    {saved ? 'Saved' : 'Save Comment'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

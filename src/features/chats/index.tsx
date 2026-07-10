@@ -28,7 +28,9 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { NewChat } from './components/new-chat'
 import { type ChatUser, type Convo } from './data/chat-types'
 // Fake Data
-import { conversations } from './data/convo.json'
+import { conversations as rawConversations } from './data/convo.json'
+
+const conversations = rawConversations as ChatUser[]
 
 export function Chats() {
   const [search, setSearch] = useState('')
@@ -38,13 +40,19 @@ export function Chats() {
   )
   const [createConversationDialogOpened, setCreateConversationDialog] =
     useState(false)
+  const [messageText, setMessageText] = useState('')
+  const [chatMessages, setChatMessages] = useState<Record<string, Convo[]>>({})
 
   // Filtered data based on the search query
   const filteredChatList = conversations.filter(({ fullName }) =>
     fullName.toLowerCase().includes(search.trim().toLowerCase())
   )
 
-  const currentMessage = selectedUser?.messages.reduce(
+  const activeMessages = selectedUser
+    ? chatMessages[selectedUser.id] ?? selectedUser.messages
+    : []
+
+  const currentMessage = activeMessages.reduce(
     (acc: Record<string, Convo[]>, obj) => {
       const key = format(obj.timestamp, 'd MMM, yyyy')
 
@@ -62,6 +70,21 @@ export function Chats() {
   )
 
   const users = conversations.map(({ messages, ...user }) => user)
+
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!messageText.trim() || !selectedUser) return
+    const newMsg: Convo = {
+      sender: 'You',
+      message: messageText.trim(),
+      timestamp: new Date().toISOString(),
+    }
+    setChatMessages((prev) => ({
+      ...prev,
+      [selectedUser.id]: [...(prev[selectedUser.id] ?? selectedUser.messages), newMsg],
+    }))
+    setMessageText('')
+  }
 
   return (
     <>
@@ -115,7 +138,7 @@ export function Chats() {
             <ScrollArea className='-mx-3 h-full overflow-scroll p-3'>
               {filteredChatList.map((chatUsr) => {
                 const { id, profile, username, messages, fullName } = chatUsr
-                const lastConvo = messages[0]
+                const lastConvo = (chatMessages[id] ?? messages)[0]
                 const lastMsg =
                   lastConvo.sender === 'You'
                     ? `You: ${lastConvo.message}`
@@ -261,7 +284,7 @@ export function Chats() {
                     </div>
                   </div>
                 </div>
-                <form className='flex w-full flex-none gap-2'>
+                <form className='flex w-full flex-none gap-2' onSubmit={handleSend}>
                   <div className='flex flex-1 items-center gap-2 rounded-md border border-input bg-card px-2 py-1 focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden lg:gap-4'>
                     <div className='space-x-1'>
                       <Button
@@ -301,17 +324,20 @@ export function Chats() {
                         type='text'
                         placeholder='Type your messages...'
                         className='h-8 w-full bg-inherit focus-visible:outline-hidden'
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
                       />
                     </label>
                     <Button
                       variant='ghost'
                       size='icon'
+                      type='submit'
                       className='hidden sm:inline-flex'
                     >
                       <Send size={20} />
                     </Button>
                   </div>
-                  <Button className='h-full sm:hidden'>
+                  <Button type='submit' className='h-full sm:hidden'>
                     <Send size={18} /> Send
                   </Button>
                 </form>

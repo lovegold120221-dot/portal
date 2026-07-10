@@ -9,22 +9,32 @@ const userStatusSchema = z.union([
 export type UserStatus = z.infer<typeof userStatusSchema>
 
 const userRoleSchema = z.union([
-  z.literal('superadmin'),
   z.literal('admin'),
-  z.literal('cashier'),
-  z.literal('manager'),
+  z.literal('developer'),
+  z.literal('client'),
+  z.literal('user'),
 ])
+export type UserRole = z.infer<typeof userRoleSchema>
 
-const _userSchema = z.object({
+export const _userSchema = z.object({
   id: z.string(),
-  firstName: z.string(),
-  lastName: z.string(),
-  username: z.string(),
   email: z.string(),
-  phoneNumber: z.string(),
-  status: userStatusSchema,
+  first_name: z.string(),
+  last_name: z.string(),
+  username: z.string(),
+  phone_number: z.string(),
   role: userRoleSchema,
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
+  status: userStatusSchema,
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
 })
 export type User = z.infer<typeof _userSchema>
+
+// Helpers for converting DB rows to display-friendly format
+export function toDisplayUser(user: User) {
+  return {
+    ...user,
+    name: `${user.first_name} ${user.last_name}`.trim(),
+    initials: `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`,
+  }
+}

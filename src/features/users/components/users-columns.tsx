@@ -58,8 +58,8 @@ export const usersColumns: ColumnDef<User>[] = [
       <DataTableColumnHeader column={column} title='Name' />
     ),
     cell: ({ row }) => {
-      const { firstName, lastName } = row.original
-      const fullName = `${firstName} ${lastName}`
+      const { first_name, last_name } = row.original
+      const fullName = `${first_name} ${last_name}`
       return <LongText className='max-w-36'>{fullName}</LongText>
     },
     meta: { className: 'w-36' },
