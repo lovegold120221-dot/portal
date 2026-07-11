@@ -73,4 +73,4 @@ Copy `.env.example` → `.env` (gitignored). Vars:
 
 - Conventional commits (commitizen `cz.yaml` + history: `feat:`, `fix:`, `chore:`, `refactor:`, `build(deps):`). `cz` bumps update `CHANGELOG.md` and tag `v$version`.
 - Default branch is `main` (CI runs here). New features require a prior issue/discussion per `.github/CONTRIBUTING.md`; PRs follow `.github/PULL_REQUEST_TEMPLATE.md`.
-- Deploy: Netlify SPA — `netlify.toml` redirects `/*` to `/index.html`.
+- Deploy: Netlify SPA — `netlify.toml` redirects `/*` to `/index.html`. Vercel SPA — `vercel.json` rewrites all routes to `/index.html`. Both exist; either platform deploys with `pnpm build` → `dist/`.

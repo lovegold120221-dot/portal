@@ -494,7 +494,7 @@ export function Apps() {
                             >
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className='w-auto min-w-[var(--radix-select-trigger-width)]'>
+                            <SelectContent className='w-auto min-w-(--radix-select-trigger-width)'>
                               {app.downloads.map((dl) => (
                                 <SelectItem
                                   key={dl.label}
@@ -692,9 +692,9 @@ function AppDetailsPanel({
         <div className='flex flex-col gap-10 lg:h-full lg:flex-row lg:items-start lg:gap-12'>
           {/* ── 📱 LEFT: Realistic Phone Mockup (sticky on desktop) ── */}
           <div className='flex shrink-0 flex-col items-center gap-4 lg:sticky lg:top-0'>
-            <div className='relative h-[650px] w-[300px] overflow-hidden rounded-[48px] border-12 border-zinc-800 bg-black shadow-2xl'>
+            <div className='relative h-162.5 w-75 overflow-hidden rounded-[48px] border-12 border-zinc-800 bg-black shadow-2xl'>
               {/* Notch */}
-              <div className='absolute top-2.5 left-1/2 z-20 h-[30px] w-[120px] -translate-x-1/2 rounded-[22px] bg-black shadow-[inset_0_-1px_2px_rgba(255,255,255,0.08)]' />
+              <div className='absolute top-2.5 left-1/2 z-20 h-7.5 w-30 -translate-x-1/2 rounded-[22px] bg-black shadow-[inset_0_-1px_2px_rgba(255,255,255,0.08)]' />
               {/* Screen */}
               <div className='relative flex h-full w-full flex-col bg-[#0b0f19]'>
                 {/* Embedded URL */}
@@ -871,7 +871,7 @@ function AppDetailsPanel({
                     setComment(e.target.value)
                     if (saved) setSaved(false)
                   }}
-                  className='min-h-[100px] resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0'
+                  className='min-h-25 resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0'
                 />
                 <div className='mt-3 flex items-center justify-between border-t pt-3'>
                   <span className='text-xs text-muted-foreground'>
