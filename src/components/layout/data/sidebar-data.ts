@@ -11,6 +11,7 @@ import {
   Database,
   Bug,
   Brain,
+  Mail,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -60,6 +61,11 @@ export const sidebarData: SidebarData = {
           title: 'Chats',
           url: '/chats',
           icon: MessagesSquare,
+        },
+        {
+          title: 'Mail',
+          url: '/mail',
+          icon: Mail,
         },
         {
           title: 'Users',

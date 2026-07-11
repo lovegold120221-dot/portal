@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { getApps, addApp } from '@/lib/supabase-apps'
 import { getServices, setServiceConnected } from '@/lib/supabase-queries'
+import { useCurrentUser } from '@/hooks/use-current-user'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -161,6 +162,7 @@ const devUsers = allUsers.filter(
 )
 
 export function Apps() {
+  const { isAdmin } = useCurrentUser()
   const [tab, setTab] = useState<Tab>('apps')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPlatform, setSelectedPlatform] = useState<string>(
@@ -336,99 +338,101 @@ export function Apps() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button size='sm' className='h-9 gap-1.5'>
-                      <Plus className='size-4' />
-                      Add App
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className='sm:max-w-md'>
-                    <DialogHeader>
-                      <DialogTitle>Add New App</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleSubmit} className='space-y-4'>
-                      <div className='space-y-2'>
-                        <Label htmlFor='name'>App Name</Label>
-                        <Input
-                          id='name'
-                          placeholder='e.g. Eburon Analytics'
-                          value={newName}
-                          onChange={(e) => setNewName(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className='space-y-2'>
-                        <Label htmlFor='desc'>Description</Label>
-                        <Input
-                          id='desc'
-                          placeholder='What does this app do?'
-                          value={newDesc}
-                          onChange={(e) => setNewDesc(e.target.value)}
-                        />
-                      </div>
-                      <div className='space-y-2'>
-                        <Label htmlFor='url'>Website URL</Label>
-                        <Input
-                          id='url'
-                          placeholder='https://eburon.ai/my-app'
-                          value={newUrl}
-                          onChange={(e) => setNewUrl(e.target.value)}
-                        />
-                      </div>
-                      <div className='space-y-2'>
-                        <Label>Icon</Label>
-                        <div className='flex flex-wrap gap-2'>
-                          {iconOptions.map((opt) => (
-                            <button
-                              key={opt.name}
-                              type='button'
-                              onClick={() => setNewIcon(opt.name)}
-                              className={`flex size-10 items-center justify-center rounded-lg border ${
-                                newIcon === opt.name
-                                  ? 'border-primary bg-primary/10 ring-2 ring-primary'
-                                  : 'border-border hover:bg-accent'
-                              }`}
-                            >
-                              {opt.icon}
-                            </button>
-                          ))}
+                {isAdmin && (
+                  <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size='sm' className='h-9 gap-1.5'>
+                        <Plus className='size-4' />
+                        Add App
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className='sm:max-w-md'>
+                      <DialogHeader>
+                        <DialogTitle>Add New App</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleSubmit} className='space-y-4'>
+                        <div className='space-y-2'>
+                          <Label htmlFor='name'>App Name</Label>
+                          <Input
+                            id='name'
+                            placeholder='e.g. Eburon Analytics'
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            required
+                          />
                         </div>
-                      </div>
-                      <div className='space-y-2'>
-                        <Label>Color</Label>
-                        <div className='flex flex-wrap gap-2'>
-                          {colorOptions.map((opt) => (
-                            <button
-                              key={opt.label}
-                              type='button'
-                              onClick={() => setNewColor(opt.value)}
-                              className={`flex size-8 items-center justify-center rounded-lg border ${
-                                newColor === opt.value
-                                  ? 'ring-2 ring-primary ring-offset-2'
-                                  : 'border-border'
-                              } ${opt.value.split(' ')[0]} ${opt.value.split(' ')[1]}`}
-                            >
-                              <span className='text-[10px] font-bold'>
-                                {opt.label[0]}
-                              </span>
-                            </button>
-                          ))}
+                        <div className='space-y-2'>
+                          <Label htmlFor='desc'>Description</Label>
+                          <Input
+                            id='desc'
+                            placeholder='What does this app do?'
+                            value={newDesc}
+                            onChange={(e) => setNewDesc(e.target.value)}
+                          />
                         </div>
-                      </div>
-                      <div className='flex justify-end gap-2 pt-2'>
-                        <Button
-                          type='button'
-                          variant='outline'
-                          onClick={() => setDialogOpen(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button type='submit'>Add App</Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
+                        <div className='space-y-2'>
+                          <Label htmlFor='url'>Website URL</Label>
+                          <Input
+                            id='url'
+                            placeholder='https://eburon.ai/my-app'
+                            value={newUrl}
+                            onChange={(e) => setNewUrl(e.target.value)}
+                          />
+                        </div>
+                        <div className='space-y-2'>
+                          <Label>Icon</Label>
+                          <div className='flex flex-wrap gap-2'>
+                            {iconOptions.map((opt) => (
+                              <button
+                                key={opt.name}
+                                type='button'
+                                onClick={() => setNewIcon(opt.name)}
+                                className={`flex size-10 items-center justify-center rounded-lg border ${
+                                  newIcon === opt.name
+                                    ? 'border-primary bg-primary/10 ring-2 ring-primary'
+                                    : 'border-border hover:bg-accent'
+                                }`}
+                              >
+                                {opt.icon}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className='space-y-2'>
+                          <Label>Color</Label>
+                          <div className='flex flex-wrap gap-2'>
+                            {colorOptions.map((opt) => (
+                              <button
+                                key={opt.label}
+                                type='button'
+                                onClick={() => setNewColor(opt.value)}
+                                className={`flex size-8 items-center justify-center rounded-lg border ${
+                                  newColor === opt.value
+                                    ? 'ring-2 ring-primary ring-offset-2'
+                                    : 'border-border'
+                                } ${opt.value.split(' ')[0]} ${opt.value.split(' ')[1]}`}
+                              >
+                                <span className='text-[10px] font-bold'>
+                                  {opt.label[0]}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className='flex justify-end gap-2 pt-2'>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            onClick={() => setDialogOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button type='submit'>Add App</Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
             </div>
 

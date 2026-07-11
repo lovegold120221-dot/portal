@@ -25,6 +25,7 @@ export const _userSchema = z.object({
   phone_number: z.string(),
   role: userRoleSchema,
   status: userStatusSchema,
+  clerk_user_id: z.string().nullable().optional(),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
 })

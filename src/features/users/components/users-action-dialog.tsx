@@ -4,8 +4,10 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { clerkUsers } from '@/lib/clerk-users-api'
+import { useCurrentUser } from '@/hooks/use-current-user'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -29,16 +31,15 @@ import { SelectDropdown } from '@/components/select-dropdown'
 import { roles } from '../data/data'
 import { type User } from '../data/schema'
 import { useUsers } from './users-provider'
-import { supabase } from '@/lib/supabase'
 
 const formSchema = z
   .object({
     first_name: z.string().min(1, 'First Name is required.'),
     last_name: z.string().min(1, 'Last Name is required.'),
     username: z.string().min(1, 'Username is required.'),
-    email: z
-      .string()
-      .email({ error: (iss) => (iss.input === '' ? 'Email is required.' : undefined) }),
+    email: z.string().email({
+      error: (iss) => (iss.input === '' ? 'Email is required.' : undefined),
+    }),
     password: z.string().transform((pwd) => pwd.trim()),
     phoneNumber: z.string().min(1, 'Phone number is required.'),
     role: z.string().min(1, 'Role is required.'),
@@ -53,7 +54,7 @@ const formSchema = z
     {
       message: 'Password is required.',
       path: ['password'],
-    },
+    }
   )
   .refine(
     ({ isEdit, password }) => {
@@ -63,7 +64,7 @@ const formSchema = z
     {
       message: 'Password must be at least 8 characters long.',
       path: ['password'],
-    },
+    }
   )
   .refine(
     ({ isEdit, password }) => {
@@ -73,7 +74,7 @@ const formSchema = z
     {
       message: 'Password must contain at least one lowercase letter.',
       path: ['password'],
-    },
+    }
   )
   .refine(
     ({ isEdit, password }) => {
@@ -83,7 +84,7 @@ const formSchema = z
     {
       message: 'Password must contain at least one number.',
       path: ['password'],
-    },
+    }
   )
   .refine(
     ({ isEdit, password, confirmPassword }) => {
@@ -93,7 +94,7 @@ const formSchema = z
     {
       message: "Passwords don't match.",
       path: ['confirmPassword'],
-    },
+    }
   )
 
 type UserForm = z.infer<typeof formSchema>
@@ -110,6 +111,7 @@ export function UsersActionDialog({
   onOpenChange,
 }: UserActionDialogProps) {
   const { refresh } = useUsers()
+  const { isAdmin } = useCurrentUser()
   const isEdit = !!currentRow
   const [loading, setLoading] = useState(false)
 
@@ -133,32 +135,27 @@ export function UsersActionDialog({
   const onSubmit = async (values: UserForm) => {
     setLoading(true)
     try {
-      if (isEdit && currentRow) {
-        const { error } = await supabase
-          .from('users')
-          .update({
-            first_name: values.first_name,
-            last_name: values.last_name,
-            username: values.username,
-            email: values.email,
-            phone_number: values.phoneNumber,
-            role: values.role as 'admin' | 'developer' | 'client' | 'user',
-          })
-          .eq('id', currentRow.id)
+      const role = (
+        isAdmin ? values.role : isEdit ? currentRow?.role : 'user'
+      ) as 'admin' | 'developer' | 'client' | 'user'
 
-        if (error) throw error
-        toast.success('User updated successfully.')
-      } else {
-        const { error } = await supabase.from('users').insert({
+      if (isEdit && currentRow) {
+        await clerkUsers.updateUser(currentRow.id, {
           first_name: values.first_name,
           last_name: values.last_name,
           username: values.username,
-          email: values.email,
-          phone_number: values.phoneNumber,
-          role: values.role as 'admin' | 'developer' | 'client' | 'user',
+          public_metadata: { role },
         })
-
-        if (error) throw error
+        toast.success('User updated successfully.')
+      } else {
+        await clerkUsers.createUser({
+          first_name: values.first_name,
+          last_name: values.last_name,
+          username: values.username,
+          email_address: [values.email],
+          password: values.password || undefined,
+          public_metadata: { role },
+        })
         toast.success('User created successfully.')
       }
 
@@ -180,179 +177,179 @@ export function UsersActionDialog({
         onOpenChange(state)
       }}
     >
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader className="text-start">
+      <DialogContent className='sm:max-w-lg'>
+        <DialogHeader className='text-start'>
           <DialogTitle>{isEdit ? 'Edit User' : 'Add New User'}</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? 'Update the user here. '
-              : 'Create new user here. '}
+            {isEdit ? 'Update the user here. ' : 'Create new user here. '}
             Click save when you're done.
           </DialogDescription>
         </DialogHeader>
-        <div className="h-105 w-[calc(100%+0.75rem)] overflow-y-auto py-1 pe-3">
+        <div className='h-105 w-[calc(100%+0.75rem)] overflow-y-auto py-1 pe-3'>
           <Form {...form}>
             <form
-              id="user-form"
+              id='user-form'
               onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-4 px-0.5"
+              className='space-y-4 px-0.5'
             >
               <FormField
                 control={form.control}
-                name="first_name"
+                name='first_name'
                 render={({ field }) => (
-                  <FormItem className="grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1">
-                    <FormLabel className="col-span-2 text-end">
+                  <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
+                    <FormLabel className='col-span-2 text-end'>
                       First Name
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="John"
-                        className="col-span-4"
-                        autoComplete="off"
+                        placeholder='John'
+                        className='col-span-4'
+                        autoComplete='off'
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="col-span-4 col-start-3" />
+                    <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="last_name"
+                name='last_name'
                 render={({ field }) => (
-                  <FormItem className="grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1">
-                    <FormLabel className="col-span-2 text-end">
+                  <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
+                    <FormLabel className='col-span-2 text-end'>
                       Last Name
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Doe"
-                        className="col-span-4"
-                        autoComplete="off"
+                        placeholder='Doe'
+                        className='col-span-4'
+                        autoComplete='off'
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="col-span-4 col-start-3" />
+                    <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="username"
+                name='username'
                 render={({ field }) => (
-                  <FormItem className="grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1">
-                    <FormLabel className="col-span-2 text-end">
+                  <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
+                    <FormLabel className='col-span-2 text-end'>
                       Username
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="john_doe"
-                        className="col-span-4"
+                        placeholder='john_doe'
+                        className='col-span-4'
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="col-span-4 col-start-3" />
+                    <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="email"
+                name='email'
                 render={({ field }) => (
-                  <FormItem className="grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1">
-                    <FormLabel className="col-span-2 text-end">
-                      Email
-                    </FormLabel>
+                  <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
+                    <FormLabel className='col-span-2 text-end'>Email</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="john.doe@gmail.com"
-                        className="col-span-4"
+                        placeholder='john.doe@gmail.com'
+                        className='col-span-4'
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="col-span-4 col-start-3" />
+                    <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="phoneNumber"
+                name='phoneNumber'
                 render={({ field }) => (
-                  <FormItem className="grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1">
-                    <FormLabel className="col-span-2 text-end">
+                  <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
+                    <FormLabel className='col-span-2 text-end'>
                       Phone Number
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="+123456789"
-                        className="col-span-4"
+                        placeholder='+123456789'
+                        className='col-span-4'
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="col-span-4 col-start-3" />
+                    <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="role"
+                name='role'
                 render={({ field }) => (
-                  <FormItem className="grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1">
-                    <FormLabel className="col-span-2 text-end">
-                      Role
-                    </FormLabel>
+                  <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
+                    <FormLabel className='col-span-2 text-end'>Role</FormLabel>
                     <SelectDropdown
                       defaultValue={field.value}
                       onValueChange={field.onChange}
-                      placeholder="Select a role"
-                      className="col-span-4"
+                      placeholder='Select a role'
+                      className='col-span-4'
+                      disabled={!isAdmin}
                       items={roles.map(({ label, value }) => ({
                         label,
                         value,
                       }))}
                     />
-                    <FormMessage className="col-span-4 col-start-3" />
+                    {!isAdmin && (
+                      <p className='col-span-4 col-start-3 text-xs text-muted-foreground'>
+                        Only admins can change user roles.
+                      </p>
+                    )}
+                    <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="password"
+                name='password'
                 render={({ field }) => (
-                  <FormItem className="grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1">
-                    <FormLabel className="col-span-2 text-end">
+                  <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
+                    <FormLabel className='col-span-2 text-end'>
                       Password
                     </FormLabel>
                     <FormControl>
                       <PasswordInput
-                        placeholder="e.g., S3cur3P@ssw0rd"
-                        className="col-span-4"
+                        placeholder='e.g., S3cur3P@ssw0rd'
+                        className='col-span-4'
                         disabled={isEdit}
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="col-span-4 col-start-3" />
+                    <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="confirmPassword"
+                name='confirmPassword'
                 render={({ field }) => (
-                  <FormItem className="grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1">
-                    <FormLabel className="col-span-2 text-end">
+                  <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
+                    <FormLabel className='col-span-2 text-end'>
                       Confirm Password
                     </FormLabel>
                     <FormControl>
                       <PasswordInput
                         disabled={!form.formState.dirtyFields.password}
-                        placeholder="e.g., S3cur3P@ssw0rd"
-                        className="col-span-4"
+                        placeholder='e.g., S3cur3P@ssw0rd'
+                        className='col-span-4'
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="col-span-4 col-start-3" />
+                    <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
                 )}
               />
@@ -360,8 +357,8 @@ export function UsersActionDialog({
           </Form>
         </div>
         <DialogFooter>
-          <Button type="submit" form="user-form" disabled={loading}>
-            {loading && <Loader2 className="size-4 animate-spin" />}
+          <Button type='submit' form='user-form' disabled={loading}>
+            {loading && <Loader2 className='size-4 animate-spin' />}
             {isEdit ? 'Update' : 'Create'}
           </Button>
         </DialogFooter>

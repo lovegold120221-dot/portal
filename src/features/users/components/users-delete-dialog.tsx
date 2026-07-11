@@ -1,13 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { AlertTriangle, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { clerkUsers } from '@/lib/clerk-users-api'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { type User } from '../data/schema'
+import { useUsers } from './users-provider'
 
 type UserDeleteDialogProps = {
   open: boolean
@@ -20,13 +22,23 @@ export function UsersDeleteDialog({
   onOpenChange,
   currentRow,
 }: UserDeleteDialogProps) {
+  const { refresh } = useUsers()
   const [value, setValue] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (value.trim() !== currentRow.username) return
-
-    onOpenChange(false)
-    showSubmittedData(currentRow, 'The following user has been deleted:')
+    setLoading(true)
+    try {
+      await clerkUsers.deleteUser(currentRow.id)
+      toast.success('User deleted successfully.')
+      onOpenChange(false)
+      refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'An error occurred.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -34,7 +46,7 @@ export function UsersDeleteDialog({
       open={open}
       onOpenChange={onOpenChange}
       form='users-delete-form'
-      disabled={value.trim() !== currentRow.username}
+      disabled={value.trim() !== currentRow.username || loading}
       title={
         <span className='text-destructive'>
           <AlertTriangle
@@ -80,6 +92,12 @@ export function UsersDeleteDialog({
               Please be careful, this operation can not be rolled back.
             </AlertDescription>
           </Alert>
+          {loading && (
+            <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+              <Loader2 className='size-4 animate-spin' />
+              Deleting...
+            </div>
+          )}
         </form>
       }
       confirmText='Delete'
