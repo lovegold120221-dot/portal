@@ -25,6 +25,7 @@ import {
   Sparkles,
   Smartphone,
   Workflow,
+  X,
 } from 'lucide-react'
 import { getApps, addApp } from '@/lib/supabase-apps'
 import { getServices, setServiceConnected } from '@/lib/supabase-queries'
@@ -486,9 +487,11 @@ export function Apps() {
                           <Select
                             value={selectedPlatform}
                             onValueChange={setSelectedPlatform}
-                            onClick={(e) => e.stopPropagation()}
                           >
-                            <SelectTrigger className='h-8 min-w-0 flex-2 text-xs'>
+                            <SelectTrigger
+                              className='h-8 min-w-0 flex-2 text-xs'
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className='w-auto min-w-[var(--radix-select-trigger-width)]'>
@@ -655,7 +658,9 @@ function AppDetailsPanel({
 }: AppDetailsPanelProps) {
   const [comment, setComment] = useState('')
   const [saved, setSaved] = useState(false)
-  const savedTimer = useRef<ReturnType<typeof setTimeout>>()
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  )
 
   const handleSave = () => {
     if (!comment.trim()) return
@@ -733,7 +738,8 @@ function AppDetailsPanel({
               <div className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'>
                 <div
                   className={`rounded px-3 py-1 text-xs font-semibold ${
-                    statusColors[app.status] || 'bg-muted text-muted-foreground'
+                    statusColors[app.status ?? ''] ||
+                    'bg-muted text-muted-foreground'
                   }`}
                 >
                   {app.status || 'Unknown'}
