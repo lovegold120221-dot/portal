@@ -208,8 +208,8 @@ export function MailFeature() {
     if (!mailbox) return
     const isStarred = msg.flags.includes('\\Flagged')
     const operation = isStarred
-      ? { remove_flags: ['\\Flagged'] }
-      : { add_flags: ['\\Flagged'] }
+      ? { removeFlags: ['\\Flagged'] }
+      : { addFlags: ['\\Flagged'] }
     try {
       await hostingerMail.updateMessageFlags(
         mailbox.resourceId,
