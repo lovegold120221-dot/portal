@@ -528,3 +528,101 @@ values
   ('stripe_sync_engine', 'Stripe Sync Engine', 'Continuously sync your payments, customer, and other data from Stripe to your Postgres database.', 'alpha', true, false),
   ('stripe_wrapper', 'Stripe Wrapper', 'Payment processing and subscription management.', 'official', true, false)
 on conflict (slug) do nothing;
+
+-- =============================================================================
+-- MESSENGER (user-to-user + group chats, WhatsApp-style)
+-- =============================================================================
+-- Conversation model:
+--   conversations         -> one row per chat (direct = 1:1, group = 2+ members)
+--   conversation_members   -> per-user membership + read cursor (last_read_at)
+--   messages               -> chat messages
+--
+-- user_id stores the application user id (Clerk `user.id`).
+--
+-- SECURITY: This app authenticates with Clerk, not Supabase Auth, and currently
+-- talks to Supabase with the anon key. RLS below is therefore permissive so the
+-- feature works in dev. To harden in production, enable the Supabase <-> Clerk
+-- integration (so the Supabase JWT `sub` == Clerk `user.id`) and replace the
+-- `using (true)` / `with check (true)` clauses with membership checks, e.g.:
+--   using (exists (select 1 from conversation_members m
+--                   where m.conversation_id = id and m.user_id = auth.uid()::text))
+-- =============================================================================
+
+create table if not exists public.conversations (
+  id uuid primary key default gen_random_uuid(),
+  type text not null default 'direct' check (type in ('direct', 'group')),
+  name text,
+  created_by text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  last_message_at timestamptz
+);
+
+comment on table public.conversations is 'A chat thread. type=direct for 1:1, group for 2+ members.';
+comment on column public.conversations.name is 'Group name. Null/ignored for direct chats (derived from the peer).';
+
+create index if not exists idx_conversations_last on public.conversations (last_message_at desc);
+
+create table if not exists public.conversation_members (
+  conversation_id uuid not null references public.conversations (id) on delete cascade,
+  user_id text not null,
+  role text not null default 'member' check (role in ('admin', 'member')),
+  joined_at timestamptz not null default now(),
+  last_read_at timestamptz,
+  primary key (conversation_id, user_id)
+);
+
+comment on table public.conversation_members is 'Membership + read cursor per user per conversation.';
+comment on column public.conversation_members.last_read_at is 'Used to compute unread counts.';
+
+create index if not exists idx_members_user on public.conversation_members (user_id);
+
+create table if not exists public.messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.conversations (id) on delete cascade,
+  sender_id text not null,
+  body text not null check (char_length(body) > 0),
+  created_at timestamptz not null default now(),
+  deleted_at timestamptz,
+  reply_to uuid references public.messages (id) on delete set null
+);
+
+create index if not exists idx_messages_conv on public.messages (conversation_id, created_at);
+
+-- Updated-at trigger ---------------------------------------------------------
+create or replace function public.set_conversation_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists on_conversations_update on public.conversations;
+create trigger on_conversations_update
+  before update on public.conversations
+  for each row execute function public.set_conversation_updated_at();
+
+-- Realtime --------------------------------------------------------------------
+alter publication supabase_realtime add table public.messages;
+alter publication supabase_realtime add table public.conversations;
+
+-- Row Level Security (permissive for Clerk/anon dev; see hardening note above)
+alter table public.conversations enable row level security;
+alter table public.conversation_members enable row level security;
+alter table public.messages enable row level security;
+
+drop policy if exists "Conversations are accessible" on public.conversations;
+create policy "Conversations are accessible"
+  on public.conversations for all
+  using (true) with check (true);
+
+drop policy if exists "Membership is accessible" on public.conversation_members;
+create policy "Membership is accessible"
+  on public.conversation_members for all
+  using (true) with check (true);
+
+drop policy if exists "Messages are accessible" on public.messages;
+create policy "Messages are accessible"
+  on public.messages for all
+  using (true) with check (true);

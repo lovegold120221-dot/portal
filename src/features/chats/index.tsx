@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Fragment } from 'react/jsx-runtime'
 import { format } from 'date-fns'
 import { useUser } from '@clerk/react'
@@ -29,33 +29,111 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { NewChat } from './components/new-chat'
-import { type ChatUser, type Convo } from './data/chat-types'
-// Fake Data
-import { conversations as rawConversations } from './data/convo.json'
-
-const conversations = rawConversations as ChatUser[]
+import { type ChatUser } from './data/chat-types'
+import { supabase } from '@/lib/supabase'
+import {
+  type ChatMessage,
+  type Conversation,
+  createGroupConversation,
+  getOrCreateDirectConversation,
+  listConversations,
+  markRead,
+  sendMessage,
+} from '@/lib/supabase-chats'
 
 export function Chats() {
   const { user: clerkUser } = useUser()
+  const meId = clerkUser?.id ?? ''
+
   const [search, setSearch] = useState('')
-  const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null)
-  const [mobileSelectedUser, setMobileSelectedUser] = useState<ChatUser | null>(
-    null
-  )
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [directoryUsers, setDirectoryUsers] = useState<ChatUser[]>([])
+  const [selectedConversationId, setSelectedConversationId] = useState<
+    string | null
+  >(null)
+  const [mobileSelectedConversationId, setMobileSelectedConversationId] =
+    useState<string | null>(null)
   const [createConversationDialogOpened, setCreateConversationDialog] =
     useState(false)
   const [messageText, setMessageText] = useState('')
-  const [chatMessages, setChatMessages] = useState<Record<string, Convo[]>>({})
-  const [directoryUsers, setDirectoryUsers] = useState<ChatUser[]>([])
+
+  const selectedIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    selectedIdRef.current = selectedConversationId
+  }, [selectedConversationId])
+
+  const directoryById = useMemo(
+    () => Object.fromEntries(directoryUsers.map((u) => [u.id, u])),
+    [directoryUsers]
+  )
 
   useEffect(() => {
+    if (!meId) return
+    let active = true
+
+    listConversations(meId)
+      .then((c) => {
+        if (active) setConversations(c)
+      })
+      .catch(() => {
+        // Conversations unavailable — start empty
+      })
+
+    const channel = supabase
+      .channel('messages:global')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          const row = payload.new as {
+            id: string
+            conversation_id: string
+            sender_id: string
+            body: string
+            created_at: string
+            reply_to: string | null
+          }
+          const msg: ChatMessage = {
+            id: row.id,
+            conversationId: row.conversation_id,
+            senderId: row.sender_id,
+            body: row.body,
+            createdAt: row.created_at,
+            replyTo: row.reply_to,
+          }
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== msg.conversationId) return c
+              if (c.messages.some((m) => m.id === msg.id)) return c
+              const isMine = msg.senderId === meId
+              const isOpen = selectedIdRef.current === c.id
+              return {
+                ...c,
+                messages: [...c.messages, msg],
+                lastMessageAt: msg.createdAt,
+                unread: isMine || isOpen ? 0 : c.unread + 1,
+              }
+            })
+          )
+        }
+      )
+      .subscribe()
+
+    return () => {
+      active = false
+      supabase.removeChannel(channel)
+    }
+  }, [meId])
+
+  useEffect(() => {
+    if (!meId) return
     let active = true
     async function loadDirectory() {
       try {
         const { data: rawUsers } = await clerkUsers.listUsers(500)
         const directory = rawUsers
           .map(clerkUserToUser)
-          .filter((u) => u.id !== clerkUser?.id)
+          .filter((u) => u.id !== meId)
           .map((u) => ({
             id: u.id,
             fullName: `${u.first_name} ${u.last_name}`.trim() || u.email,
@@ -73,57 +151,108 @@ export function Chats() {
     return () => {
       active = false
     }
-  }, [clerkUser?.id])
+  }, [meId])
 
-  // Filtered data based on the search query
-  const filteredChatList = conversations.filter(({ fullName }) =>
-    fullName.toLowerCase().includes(search.trim().toLowerCase())
-  )
-
-  const activeMessages = selectedUser
-    ? (chatMessages[selectedUser.id] ?? selectedUser.messages)
-    : []
-
-  const currentMessage = activeMessages.reduce(
-    (acc: Record<string, Convo[]>, obj) => {
-      const key = format(obj.timestamp, 'd MMM, yyyy')
-
-      // Create an array for the category if it doesn't exist
-      if (!acc[key]) {
-        acc[key] = []
+  const convDisplay = (conv: Conversation) => {
+    if (conv.type === 'group') {
+      return {
+        title: conv.name ?? 'Group',
+        subtitle: `${conv.members.length} members`,
+        profile: '',
+        isGroup: true,
       }
+    }
+    const peer = conv.members.find((m) => m.userId !== meId)
+    const peerUser = peer ? directoryById[peer.userId] : undefined
+    return {
+      title: peerUser?.fullName ?? peer?.userId ?? 'Unknown',
+      subtitle: peerUser?.title ?? '',
+      profile: peerUser?.profile ?? '',
+      isGroup: false,
+    }
+  }
 
-      // Push the current object to the array
-      acc[key].push(obj)
-
-      return acc
-    },
-    {}
+  const filteredConversations = conversations.filter((conv) =>
+    convDisplay(conv).title.toLowerCase().includes(search.trim().toLowerCase())
   )
 
-  const conversationUsers = conversations.map(({ messages, ...user }) => user)
-  const conversationIds = new Set(conversationUsers.map((u) => u.id))
-  const users = [
-    ...conversationUsers,
-    ...directoryUsers.filter((u) => !conversationIds.has(u.id)),
-  ]
+  const selectedConversation =
+    conversations.find((c) => c.id === selectedConversationId) ?? null
+  const selectedIsGroup = selectedConversation?.type === 'group'
+  const selectedPeer = selectedConversation?.members.find(
+    (m) => m.userId !== meId
+  )
+  const selectedPeerUser = selectedPeer ? directoryById[selectedPeer.userId] : undefined
+  const selectedTitle = selectedIsGroup
+    ? (selectedConversation?.name ?? 'Group')
+    : (selectedPeerUser?.fullName ?? selectedPeer?.userId ?? '')
+  const selectedSubtitle = selectedIsGroup
+    ? `${selectedConversation?.members.length} members`
+    : (selectedPeerUser?.title ?? '')
+  const selectedProfile = selectedIsGroup ? '' : (selectedPeerUser?.profile ?? '')
 
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!messageText.trim() || !selectedUser) return
-    const newMsg: Convo = {
-      sender: 'You',
-      message: messageText.trim(),
-      timestamp: new Date().toISOString(),
+  const currentMessage = useMemo(() => {
+    const messages = selectedConversation?.messages ?? []
+    return messages.reduce<Record<string, ChatMessage[]>>((acc, obj) => {
+      const key = format(new Date(obj.createdAt), 'd MMM, yyyy')
+      if (!acc[key]) acc[key] = []
+      acc[key].push(obj)
+      return acc
+    }, {})
+  }, [selectedConversation])
+
+  const handleSelect = (convId: string) => {
+    setSelectedConversationId(convId)
+    setMobileSelectedConversationId(convId)
+    if (meId) {
+      markRead(convId, meId).catch(() => {})
+      setConversations((prev) =>
+        prev.map((c) => (c.id === convId ? { ...c, unread: 0 } : c))
+      )
     }
-    setChatMessages((prev) => ({
-      ...prev,
-      [selectedUser.id]: [
-        ...(prev[selectedUser.id] ?? selectedUser.messages),
-        newMsg,
-      ],
-    }))
+  }
+
+  const handleStartConversation = async (
+    recipients: ChatUser[],
+    groupName?: string
+  ) => {
+    if (!meId || recipients.length === 0) return
+    try {
+      let convId: string
+      if (recipients.length === 1) {
+        convId = await getOrCreateDirectConversation(meId, recipients[0].id)
+      } else {
+        convId = await createGroupConversation(
+          groupName ?? 'Group',
+          [meId, ...recipients.map((r) => r.id)],
+          meId
+        )
+      }
+      const refreshed = await listConversations(meId)
+      setConversations(refreshed)
+      handleSelect(convId)
+    } catch {
+      // Failed to create conversation
+    }
+  }
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!messageText.trim() || !selectedConversationId || !meId) return
+    const text = messageText.trim()
     setMessageText('')
+    try {
+      const saved = await sendMessage(selectedConversationId, meId, text)
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === selectedConversationId
+            ? { ...c, messages: [...c.messages, saved], lastMessageAt: saved.createdAt }
+            : c
+        )
+      )
+    } catch {
+      // Failed to send
+    }
   }
 
   return (
@@ -176,41 +305,57 @@ export function Chats() {
             </div>
 
             <ScrollArea className='-mx-3 h-full overflow-scroll p-3'>
-              {filteredChatList.map((chatUsr) => {
-                const { id, profile, username, messages, fullName } = chatUsr
-                const lastConvo = (chatMessages[id] ?? messages)[0]
-                const lastMsg =
-                  lastConvo.sender === 'You'
-                    ? `You: ${lastConvo.message}`
-                    : lastConvo.message
+              {filteredConversations.map((conv) => {
+                const { title, subtitle, profile, isGroup } = convDisplay(conv)
+                const last = conv.messages[conv.messages.length - 1]
+                const lastMsg = last
+                  ? last.senderId === meId
+                    ? `You: ${last.body}`
+                    : last.body
+                  : 'No messages yet'
                 return (
-                  <Fragment key={id}>
+                  <Fragment key={conv.id}>
                     <button
                       type='button'
                       className={cn(
                         'group hover:bg-accent hover:text-accent-foreground',
                         `flex w-full rounded-md px-2 py-2 text-start text-sm`,
-                        selectedUser?.id === id && 'sm:bg-muted'
+                        selectedConversationId === conv.id && 'sm:bg-muted'
                       )}
-                      onClick={() => {
-                        setSelectedUser(chatUsr)
-                        setMobileSelectedUser(chatUsr)
-                      }}
+                      onClick={() => handleSelect(conv.id)}
                     >
-                      <div className='flex gap-2'>
-                        <Avatar>
-                          <AvatarImage src={profile} alt={username} />
-                          <AvatarFallback>
-                            {getDisplayNameInitials(fullName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <span className='col-start-2 row-span-2 font-medium'>
-                            {fullName}
+                      <div className='flex w-full gap-2'>
+                        <div className='relative'>
+                          <Avatar>
+                            <AvatarImage src={profile} alt={title} />
+                            <AvatarFallback>
+                              {getDisplayNameInitials(title)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {conv.unread > 0 && (
+                            <span className='absolute -top-1 -end-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground'>
+                              {conv.unread}
+                            </span>
+                          )}
+                        </div>
+                        <div className='min-w-0 flex-1'>
+                          <span className='col-start-2 row-span-2 block truncate font-medium'>
+                            {title}
+                            {isGroup && (
+                              <MessagesSquare
+                                size={12}
+                                className='ms-1 inline stroke-muted-foreground'
+                              />
+                            )}
                           </span>
-                          <span className='col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90'>
+                          <span className='col-start-2 row-span-2 row-start-2 line-clamp-2 block text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90'>
                             {lastMsg}
                           </span>
+                          {subtitle && (
+                            <span className='block truncate text-xs text-muted-foreground'>
+                              {subtitle}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -222,11 +367,11 @@ export function Chats() {
           </div>
 
           {/* Right Side */}
-          {selectedUser ? (
+          {selectedConversation ? (
             <div
               className={cn(
                 'absolute inset-0 inset-s-full z-50 hidden w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md',
-                mobileSelectedUser && 'inset-s-0 flex'
+                mobileSelectedConversationId && 'inset-s-0 flex'
               )}
             >
               {/* Top Part */}
@@ -237,26 +382,23 @@ export function Chats() {
                     size='icon'
                     variant='ghost'
                     className='-ms-2 h-full sm:hidden'
-                    onClick={() => setMobileSelectedUser(null)}
+                    onClick={() => setMobileSelectedConversationId(null)}
                   >
                     <ArrowLeft className='rtl:rotate-180' />
                   </Button>
                   <div className='flex items-center gap-2 lg:gap-4'>
                     <Avatar className='size-9 lg:size-11'>
-                      <AvatarImage
-                        src={selectedUser.profile}
-                        alt={selectedUser.username}
-                      />
+                      <AvatarImage src={selectedProfile} alt={selectedTitle} />
                       <AvatarFallback>
-                        {getDisplayNameInitials(selectedUser.fullName)}
+                        {getDisplayNameInitials(selectedTitle)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <span className='col-start-2 row-span-2 text-sm font-medium lg:text-base'>
-                        {selectedUser.fullName}
+                      <span className='col-start-2 row-span-2 block text-sm font-medium lg:text-base'>
+                        {selectedTitle}
                       </span>
                       <span className='col-start-2 row-span-2 row-start-2 line-clamp-1 block max-w-32 text-xs text-nowrap text-ellipsis text-muted-foreground lg:max-w-none lg:text-sm'>
-                        {selectedUser.title}
+                        {selectedSubtitle}
                       </span>
                     </div>
                   </div>
@@ -293,34 +435,33 @@ export function Chats() {
                 <div className='flex size-full flex-1'>
                   <div className='chat-text-container relative -me-4 flex flex-1 flex-col overflow-y-hidden'>
                     <div className='chat-flex flex h-40 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4'>
-                      {currentMessage &&
-                        Object.keys(currentMessage).map((key) => (
-                          <Fragment key={key}>
-                            {currentMessage[key].map((msg, index) => (
-                              <div
-                                key={`${msg.sender}-${msg.timestamp}-${index}`}
+                      {Object.keys(currentMessage).map((key) => (
+                        <Fragment key={key}>
+                          {currentMessage[key].map((msg) => (
+                            <div
+                              key={msg.id}
+                              className={cn(
+                                'chat-box max-w-72 px-3 py-2 wrap-break-word shadow-lg',
+                                msg.senderId === meId
+                                  ? 'self-end rounded-[16px_16px_0_16px] bg-primary/90 text-primary-foreground/75'
+                                  : 'self-start rounded-[16px_16px_16px_0] bg-muted'
+                              )}
+                            >
+                              {msg.body}{' '}
+                              <span
                                 className={cn(
-                                  'chat-box max-w-72 px-3 py-2 wrap-break-word shadow-lg',
-                                  msg.sender === 'You'
-                                    ? 'self-end rounded-[16px_16px_0_16px] bg-primary/90 text-primary-foreground/75'
-                                    : 'self-start rounded-[16px_16px_16px_0] bg-muted'
+                                  'mt-1 block text-xs font-light text-foreground/75 italic',
+                                  msg.senderId === meId &&
+                                    'text-end text-primary-foreground/85'
                                 )}
                               >
-                                {msg.message}{' '}
-                                <span
-                                  className={cn(
-                                    'mt-1 block text-xs font-light text-foreground/75 italic',
-                                    msg.sender === 'You' &&
-                                      'text-end text-primary-foreground/85'
-                                  )}
-                                >
-                                  {format(msg.timestamp, 'h:mm a')}
-                                </span>
-                              </div>
-                            ))}
-                            <div className='text-center text-xs'>{key}</div>
-                          </Fragment>
-                        ))}
+                                {format(new Date(msg.createdAt), 'h:mm a')}
+                              </span>
+                            </div>
+                          ))}
+                          <div className='text-center text-xs'>{key}</div>
+                        </Fragment>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -410,9 +551,10 @@ export function Chats() {
           )}
         </section>
         <NewChat
-          users={users}
+          users={directoryUsers}
           onOpenChange={setCreateConversationDialog}
           open={createConversationDialogOpened}
+          onStartConversation={handleStartConversation}
         />
       </Main>
     </>

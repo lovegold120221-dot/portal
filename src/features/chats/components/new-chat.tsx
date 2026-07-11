@@ -3,6 +3,7 @@ import { Check, X } from 'lucide-react'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Command,
   CommandEmpty,
@@ -14,6 +15,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -25,9 +27,16 @@ type NewChatProps = {
   users: User[]
   open: boolean
   onOpenChange: (open: boolean) => void
+  onStartConversation: (users: User[], groupName?: string) => void
 }
-export function NewChat({ users, onOpenChange, open }: NewChatProps) {
+export function NewChat({
+  users,
+  onOpenChange,
+  open,
+  onStartConversation,
+}: NewChatProps) {
   const [selectedUsers, setSelectedUsers] = useState<User[]>([])
+  const [groupName, setGroupName] = useState('')
 
   const handleSelectUser = (user: User) => {
     if (!selectedUsers.find((u) => u.id === user.id)) {
@@ -43,10 +52,22 @@ export function NewChat({ users, onOpenChange, open }: NewChatProps) {
 
   const handleOpenChange = (newOpen: boolean) => {
     onOpenChange(newOpen)
-    // Reset selected users when dialog closes
     if (!newOpen) {
       setSelectedUsers([])
+      setGroupName('')
     }
+  }
+
+  const isGroup = selectedUsers.length > 1
+
+  const handleStart = () => {
+    if (selectedUsers.length === 0) return
+    showSubmittedData(selectedUsers)
+    onStartConversation(
+      selectedUsers,
+      isGroup ? groupName.trim() || undefined : undefined
+    )
+    handleOpenChange(false)
   }
 
   return (
@@ -54,6 +75,10 @@ export function NewChat({ users, onOpenChange, open }: NewChatProps) {
       <DialogContent className='sm:max-w-150'>
         <DialogHeader>
           <DialogTitle>New message</DialogTitle>
+          <DialogDescription>
+            Select one person for a direct chat, or two or more to start a
+            group.
+          </DialogDescription>
         </DialogHeader>
         <div className='flex flex-col gap-4'>
           <div className='flex flex-wrap items-baseline-last gap-2'>
@@ -75,6 +100,15 @@ export function NewChat({ users, onOpenChange, open }: NewChatProps) {
               </Badge>
             ))}
           </div>
+
+          {isGroup && (
+            <Input
+              placeholder='Group name'
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+            />
+          )}
+
           <Command className='rounded-lg border'>
             <CommandInput
               placeholder='Search people...'
@@ -115,10 +149,10 @@ export function NewChat({ users, onOpenChange, open }: NewChatProps) {
           </Command>
           <Button
             variant={'default'}
-            onClick={() => showSubmittedData(selectedUsers)}
+            onClick={handleStart}
             disabled={selectedUsers.length === 0}
           >
-            Chat
+            {isGroup ? 'Create group' : 'Chat'}
           </Button>
         </div>
       </DialogContent>
