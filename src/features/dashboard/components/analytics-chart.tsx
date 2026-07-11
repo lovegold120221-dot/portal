@@ -1,12 +1,15 @@
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 
-const data: Array<{ name: string; clicks: number; uniques: number }> = []
+type AnalyticsChartProps = {
+  data: { name: string; value: number }[]
+  loading?: boolean
+}
 
-export function AnalyticsChart() {
-  if (data.length === 0) {
+export function AnalyticsChart({ data, loading }: AnalyticsChartProps) {
+  if (!loading && data.length === 0) {
     return (
       <div className='flex h-[300px] items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground'>
-        Analytics data will appear here once available.
+        Unread email data will appear here once available.
       </div>
     )
   }
@@ -22,6 +25,7 @@ export function AnalyticsChart() {
           axisLine={false}
         />
         <YAxis
+          allowDecimals={false}
           stroke='#888888'
           fontSize={12}
           tickLine={false}
@@ -29,19 +33,11 @@ export function AnalyticsChart() {
         />
         <Area
           type='monotone'
-          dataKey='clicks'
+          dataKey='value'
           stroke='currentColor'
           className='text-primary'
           fill='currentColor'
           fillOpacity={0.15}
-        />
-        <Area
-          type='monotone'
-          dataKey='uniques'
-          stroke='currentColor'
-          className='text-muted-foreground'
-          fill='currentColor'
-          fillOpacity={0.1}
         />
       </AreaChart>
     </ResponsiveContainer>

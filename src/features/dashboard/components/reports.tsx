@@ -1,12 +1,4 @@
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import {
   FileText,
   Download,
   Users,
@@ -14,6 +6,14 @@ import {
   Activity,
   Calendar,
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 
 const reports = [
   {
@@ -117,7 +117,11 @@ export function Reports() {
                 <p className='mb-3 text-xs font-medium text-primary'>
                   {r.metric}
                 </p>
-                <Button size='sm' variant='secondary' className='mt-auto gap-1.5'>
+                <Button
+                  size='sm'
+                  variant='secondary'
+                  className='mt-auto gap-1.5'
+                >
                   <Download className='size-3.5' />
                   Download
                 </Button>

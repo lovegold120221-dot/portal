@@ -1,27 +1,23 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 
-const appUrl = 'https://eburon.ai'
+type OverviewProps = {
+  data: { name: string; count: number }[]
+  loading?: boolean
+}
 
-const data = [
-  { name: 'Jan', clicks: 3200, downloads: 210 },
-  { name: 'Feb', clicks: 2800, downloads: 180 },
-  { name: 'Mar', clicks: 4100, downloads: 290 },
-  { name: 'Apr', clicks: 3800, downloads: 260 },
-  { name: 'May', clicks: 5200, downloads: 340 },
-  { name: 'Jun', clicks: 4900, downloads: 310 },
-  { name: 'Jul', clicks: 6100, downloads: 420 },
-  { name: 'Aug', clicks: 5800, downloads: 390 },
-  { name: 'Sep', clicks: 6400, downloads: 450 },
-  { name: 'Oct', clicks: 7200, downloads: 510 },
-  { name: 'Nov', clicks: 6900, downloads: 480 },
-  { name: 'Dec', clicks: 8500, downloads: 620 },
-]
+export function Overview({ data, loading }: OverviewProps) {
+  if (!loading && data.length === 0) {
+    return (
+      <div className='flex h-[350px] items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground'>
+        No app download data available yet.
+      </div>
+    )
+  }
 
-export function Overview() {
   return (
     <div className='space-y-2'>
       <p className='text-sm text-muted-foreground'>
-        Tracking activity for {appUrl}
+        Download options available per app
       </p>
       <ResponsiveContainer width='100%' height={350}>
         <BarChart data={data}>
@@ -33,15 +29,15 @@ export function Overview() {
             axisLine={false}
           />
           <YAxis
-            direction='ltr'
+            allowDecimals={false}
             stroke='#888888'
             fontSize={12}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value) => `${value.toLocaleString()}`}
+            tickFormatter={(value) => `${value}`}
           />
           <Bar
-            dataKey='clicks'
+            dataKey='count'
             fill='currentColor'
             radius={[4, 4, 0, 0]}
             className='fill-primary'
