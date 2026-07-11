@@ -27,6 +27,7 @@ export type ClerkUser = {
   public_metadata: {
     role?: UserRole
     status?: UserStatus
+    isSuperuser?: boolean
   }
   created_at: number
   updated_at: number
@@ -50,6 +51,7 @@ export type ClerkCreateUserPayload = {
   public_metadata?: {
     role?: UserRole
     status?: UserStatus
+    isSuperuser?: boolean
   }
 }
 
@@ -60,5 +62,6 @@ export type ClerkUpdateUserPayload = {
   public_metadata?: {
     role?: UserRole
     status?: UserStatus
+    isSuperuser?: boolean
   }
 }

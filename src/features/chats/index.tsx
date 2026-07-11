@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Fragment } from 'react/jsx-runtime'
 import { format } from 'date-fns'
+import { useUser } from '@clerk/react'
 import {
   ArrowLeft,
   MoreVertical,
@@ -14,6 +15,8 @@ import {
   Video,
   MessagesSquare,
 } from 'lucide-react'
+import { clerkUserToUser } from '@/lib/clerk-mapper'
+import { clerkUsers } from '@/lib/clerk-users-api'
 import { cn, getDisplayNameInitials } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -27,15 +30,13 @@ import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { NewChat } from './components/new-chat'
 import { type ChatUser, type Convo } from './data/chat-types'
-import { useUser } from '@clerk/react'
-import { clerkUsers } from '@/lib/clerk-users-api'
-import { clerkUserToUser } from '@/lib/clerk-mapper'
 // Fake Data
 import { conversations as rawConversations } from './data/convo.json'
 
 const conversations = rawConversations as ChatUser[]
 
 export function Chats() {
+  const { user: clerkUser } = useUser()
   const [search, setSearch] = useState('')
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null)
   const [mobileSelectedUser, setMobileSelectedUser] = useState<ChatUser | null>(
@@ -47,13 +48,40 @@ export function Chats() {
   const [chatMessages, setChatMessages] = useState<Record<string, Convo[]>>({})
   const [directoryUsers, setDirectoryUsers] = useState<ChatUser[]>([])
 
+  useEffect(() => {
+    let active = true
+    async function loadDirectory() {
+      try {
+        const { data: rawUsers } = await clerkUsers.listUsers(500)
+        const directory = rawUsers
+          .map(clerkUserToUser)
+          .filter((u) => u.id !== clerkUser?.id)
+          .map((u) => ({
+            id: u.id,
+            fullName: `${u.first_name} ${u.last_name}`.trim() || u.email,
+            username: u.email || u.username,
+            profile: '',
+            title: u.role,
+            messages: [],
+          }))
+        if (active) setDirectoryUsers(directory)
+      } catch {
+        // Directory unavailable — fall back to existing conversation list only
+      }
+    }
+    loadDirectory()
+    return () => {
+      active = false
+    }
+  }, [clerkUser?.id])
+
   // Filtered data based on the search query
   const filteredChatList = conversations.filter(({ fullName }) =>
     fullName.toLowerCase().includes(search.trim().toLowerCase())
   )
 
   const activeMessages = selectedUser
-    ? chatMessages[selectedUser.id] ?? selectedUser.messages
+    ? (chatMessages[selectedUser.id] ?? selectedUser.messages)
     : []
 
   const currentMessage = activeMessages.reduce(
@@ -73,7 +101,12 @@ export function Chats() {
     {}
   )
 
-  const users = conversations.map(({ messages, ...user }) => user)
+  const conversationUsers = conversations.map(({ messages, ...user }) => user)
+  const conversationIds = new Set(conversationUsers.map((u) => u.id))
+  const users = [
+    ...conversationUsers,
+    ...directoryUsers.filter((u) => !conversationIds.has(u.id)),
+  ]
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault()
@@ -85,7 +118,10 @@ export function Chats() {
     }
     setChatMessages((prev) => ({
       ...prev,
-      [selectedUser.id]: [...(prev[selectedUser.id] ?? selectedUser.messages), newMsg],
+      [selectedUser.id]: [
+        ...(prev[selectedUser.id] ?? selectedUser.messages),
+        newMsg,
+      ],
     }))
     setMessageText('')
   }
@@ -288,7 +324,10 @@ export function Chats() {
                     </div>
                   </div>
                 </div>
-                <form className='flex w-full flex-none gap-2' onSubmit={handleSend}>
+                <form
+                  className='flex w-full flex-none gap-2'
+                  onSubmit={handleSend}
+                >
                   <div className='flex flex-1 items-center gap-2 rounded-md border border-input bg-card px-2 py-1 focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden lg:gap-4'>
                     <div className='space-x-1'>
                       <Button
