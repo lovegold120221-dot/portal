@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { ExternalLink } from 'lucide-react'
 import {
+  type LucideIcon,
+  ExternalLink,
   Brain,
   Cpu,
   Wrench,
@@ -49,7 +50,6 @@ import {
   ScrollText,
   GitBranch,
 } from 'lucide-react'
-import { type LucideIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -578,120 +578,120 @@ export function Models() {
       </Header>
 
       <Main fixed>
-              <div className='space-y-6'>
-        <div className='flex items-center justify-between'>
-          <div>
-            <h1 className='text-2xl font-bold tracking-tight'>Models</h1>
-            <p className='text-muted-foreground'>
-              Eburon Pro model catalog — pull and run with Ollama.
-            </p>
+        <div className='space-y-6'>
+          <div className='flex items-center justify-between'>
+            <div>
+              <h1 className='text-2xl font-bold tracking-tight'>Models</h1>
+              <p className='text-muted-foreground'>
+                Eburon Pro model catalog — pull and run with Ollama.
+              </p>
+            </div>
+          </div>
+
+          <div className='mt-6'>
+            <Tabs value={category} onValueChange={setCategory}>
+              <div className='sticky top-0 z-10 -mx-6 flex items-center justify-between bg-background px-6 py-2'>
+                <TabsList>
+                  {categories.map((cat) => (
+                    <TabsTrigger
+                      key={cat.value}
+                      value={cat.value}
+                      className='gap-2'
+                    >
+                      <cat.icon className='size-4' />
+                      {cat.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                <Input
+                  placeholder='Search models...'
+                  className='h-9 w-56'
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <Separator className='my-4 shadow-sm' />
+
+              <div className='max-h-[calc(100vh-320px)] overflow-y-auto'>
+                <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+                  {filtered.map((model) => (
+                    <Card key={model.name} className='hover:shadow-md'>
+                      <CardHeader className='p-4 pb-2'>
+                        <div className='flex items-start justify-between'>
+                          <div className='flex items-center gap-3'>
+                            <div className='flex size-10 items-center justify-center rounded-lg bg-linear-to-br from-purple-500 to-blue-600 p-2 text-white'>
+                              <model.icon className='size-5' />
+                            </div>
+                            <div>
+                              <CardTitle className='text-sm font-semibold'>
+                                {model.name}
+                              </CardTitle>
+                              <CardDescription className='text-xs'>
+                                {model.size} · {model.context} context
+                              </CardDescription>
+                            </div>
+                          </div>
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='size-8'
+                            asChild
+                          >
+                            <a
+                              href={model.ollamaUrl}
+                              target='_blank'
+                              rel='noopener noreferrer'
+                            >
+                              <ExternalLink className='size-4' />
+                            </a>
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className='p-4 pt-2'>
+                        <p className='mb-3 text-xs text-muted-foreground'>
+                          {model.description}
+                        </p>
+                        <div className='flex flex-wrap gap-1.5'>
+                          {model.capabilities.map((cap) => (
+                            <Badge
+                              key={cap}
+                              variant='outline'
+                              className={`text-[10px] ${capColors[cap] || ''}`}
+                            >
+                              {cap}
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className='mt-3'>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            className='w-full text-xs'
+                            onClick={() => {
+                              navigator.clipboard.writeText(
+                                `ollama run eburonpro/${model.name}`
+                              )
+                            }}
+                          >
+                            <Terminal className='me-1.5 size-3' />
+                            ollama run eburonpro/{model.name}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {filtered.length === 0 && (
+                  <div className='py-12 text-center text-sm text-muted-foreground'>
+                    No models found.
+                  </div>
+                )}
+              </div>
+            </Tabs>
           </div>
         </div>
-
-        <div className='mt-6'>
-          <Tabs value={category} onValueChange={setCategory}>
-            <div className='sticky top-0 z-10 -mx-6 flex items-center justify-between bg-background px-6 py-2'>
-              <TabsList>
-                {categories.map((cat) => (
-                  <TabsTrigger
-                    key={cat.value}
-                    value={cat.value}
-                    className='gap-2'
-                  >
-                    <cat.icon className='size-4' />
-                    {cat.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              <Input
-                placeholder='Search models...'
-                className='h-9 w-56'
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
-            <Separator className='my-4 shadow-sm' />
-
-            <div className='max-h-[calc(100vh-320px)] overflow-y-auto'>
-              <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-                {filtered.map((model) => (
-                  <Card key={model.name} className='hover:shadow-md'>
-                    <CardHeader className='p-4 pb-2'>
-                      <div className='flex items-start justify-between'>
-                        <div className='flex items-center gap-3'>
-                          <div className='flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 p-2 text-white'>
-                            <model.icon className='size-5' />
-                          </div>
-                          <div>
-                            <CardTitle className='text-sm font-semibold'>
-                              {model.name}
-                            </CardTitle>
-                            <CardDescription className='text-xs'>
-                              {model.size} · {model.context} context
-                            </CardDescription>
-                          </div>
-                        </div>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='size-8'
-                          asChild
-                        >
-                          <a
-                            href={model.ollamaUrl}
-                            target='_blank'
-                            rel='noopener noreferrer'
-                          >
-                            <ExternalLink className='size-4' />
-                          </a>
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className='p-4 pt-2'>
-                      <p className='mb-3 text-xs text-muted-foreground'>
-                        {model.description}
-                      </p>
-                      <div className='flex flex-wrap gap-1.5'>
-                        {model.capabilities.map((cap) => (
-                          <Badge
-                            key={cap}
-                            variant='outline'
-                            className={`text-[10px] ${capColors[cap] || ''}`}
-                          >
-                            {cap}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className='mt-3'>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          className='w-full text-xs'
-                          onClick={() => {
-                            navigator.clipboard.writeText(
-                              `ollama run eburonpro/${model.name}`
-                            )
-                          }}
-                        >
-                          <Terminal className='me-1.5 size-3' />
-                          ollama run eburonpro/{model.name}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {filtered.length === 0 && (
-                <div className='py-12 text-center text-sm text-muted-foreground'>
-                  No models found.
-                </div>
-              )}
-            </div>
-          </Tabs>
-        </div>
-              </div>
       </Main>
     </>
   )

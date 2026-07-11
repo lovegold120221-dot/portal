@@ -7,11 +7,12 @@ import { type User } from './schema'
  */
 export async function loadUsers(): Promise<User[]> {
   const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false })
+    .from('users')
+    .select('*')
+    .order('created_at', { ascending: false })
 
   if (error) {
+    // eslint-disable-next-line no-console
     console.warn('Failed to load users from database:', error.message)
     return []
   }

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowLeft,
   AudioLines,
   BarChart3,
   Bot,
@@ -25,9 +24,7 @@ import {
   Shield,
   Sparkles,
   Smartphone,
-  Users,
   Workflow,
-  X,
 } from 'lucide-react'
 import { getApps, addApp } from '@/lib/supabase-apps'
 import { getServices, setServiceConnected } from '@/lib/supabase-queries'
@@ -50,8 +47,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Tooltip,
   TooltipContent,
@@ -156,9 +153,7 @@ const statusColors: Record<string, string> = {
     'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
 }
 
-const emilAlvaro = allUsers.find(
-  (u) => u.email === 'emil.alvaro@eburon.ai'
-)
+const emilAlvaro = allUsers.find((u) => u.email === 'emil.alvaro@eburon.ai')
 
 const devUsers = allUsers.filter(
   (u) => u.role === 'developer' || u.role === 'admin'
@@ -182,10 +177,7 @@ export function Apps() {
   const [loadingServices, setLoadingServices] = useState(true)
   const [appAssignees, setAppAssignees] = useState<Record<string, User[]>>(
     Object.fromEntries(
-      defaultApps.map((app) => [
-        app.name,
-        emilAlvaro ? [emilAlvaro] : [],
-      ])
+      defaultApps.map((app) => [app.name, emilAlvaro ? [emilAlvaro] : []])
     )
   )
 
@@ -439,10 +431,7 @@ export function Apps() {
               </div>
             </div>
 
-            <TabsContent
-              value='apps'
-              className='mt-0'
-            >
+            <TabsContent value='apps' className='mt-0'>
               <Separator className='shadow-sm' />
               <div className='pt-4'>
                 <div className='max-h-[calc(100vh-360px)] overflow-y-auto'>
@@ -450,9 +439,10 @@ export function Apps() {
                     {filteredApps.map((app) => (
                       <li
                         key={app.name}
-                        className='flex cursor-pointer flex-col rounded-lg border p-4 transition-all hover:shadow-md'                          onClick={() => {
-                            setSelectedApp(app)
-                          }}
+                        className='flex cursor-pointer flex-col rounded-lg border p-4 transition-all hover:shadow-md'
+                        onClick={() => {
+                          setSelectedApp(app)
+                        }}
                       >
                         <div className='mb-3 flex items-center justify-between'>
                           <div
@@ -498,7 +488,7 @@ export function Apps() {
                             onValueChange={setSelectedPlatform}
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <SelectTrigger className='h-8 min-w-0 flex-[2] text-xs'>
+                            <SelectTrigger className='h-8 min-w-0 flex-2 text-xs'>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className='w-auto min-w-[var(--radix-select-trigger-width)]'>
@@ -534,7 +524,9 @@ export function Apps() {
                                         </Button>
                                       </span>
                                     </TooltipTrigger>
-                                    <TooltipContent>Not available</TooltipContent>
+                                    <TooltipContent>
+                                      Not available
+                                    </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
                               )
@@ -675,7 +667,7 @@ function AppDetailsPanel({
   return (
     <div className='relative flex h-full flex-col'>
       {/* ===== Floating Header (overlays content) ===== */}
-      <div className='pointer-events-none absolute top-0 inset-x-0 z-30 flex items-center justify-between px-8 py-4'>
+      <div className='pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between px-8 py-4'>
         <div />
         <div className='pointer-events-auto flex items-center gap-2'>
           <div className='flex size-9 items-center justify-center'>
@@ -691,11 +683,11 @@ function AppDetailsPanel({
       </div>
 
       {/* ===== Scrollable Content ===== */}
-      <div className='flex-1 overflow-y-auto py-6 pl-2 pr-8 lg:overflow-hidden'>
+      <div className='flex-1 overflow-y-auto py-6 pr-8 pl-2 lg:overflow-hidden'>
         <div className='flex flex-col gap-10 lg:h-full lg:flex-row lg:items-start lg:gap-12'>
           {/* ── 📱 LEFT: Realistic Phone Mockup (sticky on desktop) ── */}
           <div className='flex shrink-0 flex-col items-center gap-4 lg:sticky lg:top-0'>
-            <div className='relative h-[650px] w-[300px] overflow-hidden rounded-[48px] border-[12px] border-zinc-800 bg-black shadow-2xl'>
+            <div className='relative h-[650px] w-[300px] overflow-hidden rounded-[48px] border-12 border-zinc-800 bg-black shadow-2xl'>
               {/* Notch */}
               <div className='absolute top-2.5 left-1/2 z-20 h-[30px] w-[120px] -translate-x-1/2 rounded-[22px] bg-black shadow-[inset_0_-1px_2px_rgba(255,255,255,0.08)]' />
               {/* Screen */}
@@ -710,7 +702,7 @@ function AppDetailsPanel({
                   loading='lazy'
                 />
                 {/* Status bar overlay */}
-                <div className='pointer-events-none absolute top-0 inset-x-0 z-10 flex justify-between px-5 pt-3.5'>
+                <div className='pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-between px-5 pt-3.5'>
                   <span className='text-[12px] font-semibold text-white drop-shadow-sm'>
                     9:41
                   </span>
@@ -727,7 +719,7 @@ function AppDetailsPanel({
           </div>
 
           {/* ── 📋 RIGHT: Stacked Cards (scrollable on desktop) ── */}
-          <div className='flex min-w-0 flex-1 flex-col gap-8 lg:overflow-y-auto lg:max-h-full'>
+          <div className='flex min-w-0 flex-1 flex-col gap-8 lg:max-h-full lg:overflow-y-auto'>
             {/* App name header */}
             <div className='flex items-center gap-3'>
               <h1 className='text-2xl font-bold tracking-tight'>{app.name}</h1>
@@ -735,14 +727,13 @@ function AppDetailsPanel({
 
             {/* Status */}
             <div className='space-y-3'>
-              <div className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+              <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
                 Status
               </div>
               <div className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'>
                 <div
                   className={`rounded px-3 py-1 text-xs font-semibold ${
-                    statusColors[app.status] ||
-                    'bg-muted text-muted-foreground'
+                    statusColors[app.status] || 'bg-muted text-muted-foreground'
                   }`}
                 >
                   {app.status || 'Unknown'}
@@ -769,7 +760,7 @@ function AppDetailsPanel({
               >
                 <X className='size-4' />
               </Button>
-              <div className='mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+              <div className='mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase'>
                 Description
               </div>
               <p className='mb-5 text-[15px] leading-relaxed text-foreground/90'>
@@ -789,7 +780,7 @@ function AppDetailsPanel({
 
             {/* 2. Developer */}
             <div className='space-y-3'>
-              <div className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+              <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
                 Developer
               </div>
               <div className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'>
@@ -802,7 +793,7 @@ function AppDetailsPanel({
 
             {/* 3. Assign Developers & Admins */}
             <div className='space-y-3'>
-              <div className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+              <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
                 Assign Developers & Admins
               </div>
               <div className='flex flex-wrap gap-2'>
@@ -820,11 +811,11 @@ function AppDetailsPanel({
                           : 'border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                       }`}
                     >
-                      {assigned && (
-                        <X className='size-3 shrink-0 opacity-60' />
-                      )}
+                      {assigned && <X className='size-3 shrink-0 opacity-60' />}
                       {user.first_name} {user.last_name}
-                      <span className='text-[10px] opacity-50'>({user.role})</span>
+                      <span className='text-[10px] opacity-50'>
+                        ({user.role})
+                      </span>
                     </button>
                   )
                 })}
@@ -834,7 +825,7 @@ function AppDetailsPanel({
             {/* 4. Assigned Developers */}
             {(appAssignees[app.name] || []).length > 0 && (
               <div className='space-y-3'>
-                <div className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+                <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
                   Assigned Developers
                 </div>
                 <div className='space-y-2'>
@@ -863,7 +854,7 @@ function AppDetailsPanel({
 
             {/* 5. Testing Comment Box */}
             <div className='space-y-3'>
-              <div className='text-xs font-medium uppercase tracking-wider text-muted-foreground'>
+              <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
                 Testing Comment
               </div>
               <div className='rounded-xl border bg-card p-4'>
