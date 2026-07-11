@@ -76,3 +76,36 @@ export async function addApp(app: EburonApp): Promise<EburonApp | null> {
     return app
   }
 }
+
+export async function updateApp(app: EburonApp): Promise<EburonApp | null> {
+  try {
+    const { data, error } = await supabase
+      .from('apps')
+      .update({
+        icon: app.icon,
+        desc: app.desc,
+        color: app.color,
+        url: app.url,
+        downloads: JSON.stringify(app.downloads),
+        developers: JSON.stringify(app.developers || []),
+        status: app.status || null,
+      })
+      .eq('name', app.name)
+      .select()
+      .single()
+
+    if (error) return app
+    return data as unknown as EburonApp
+  } catch {
+    return app
+  }
+}
+
+export async function deleteApp(name: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('apps').delete().eq('name', name)
+    return !error
+  } catch {
+    return false
+  }
+}

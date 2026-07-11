@@ -111,7 +111,7 @@ export function UsersActionDialog({
   onOpenChange,
 }: UserActionDialogProps) {
   const { refresh } = useUsers()
-  const { isAdmin } = useCurrentUser()
+  const { canManageUsers } = useCurrentUser()
   const isEdit = !!currentRow
   const [loading, setLoading] = useState(false)
 
@@ -136,7 +136,7 @@ export function UsersActionDialog({
     setLoading(true)
     try {
       const role = (
-        isAdmin ? values.role : isEdit ? currentRow?.role : 'user'
+        canManageUsers ? values.role : isEdit ? currentRow?.role : 'user'
       ) as 'admin' | 'developer' | 'client' | 'user'
 
       if (isEdit && currentRow) {
@@ -298,15 +298,15 @@ export function UsersActionDialog({
                       onValueChange={field.onChange}
                       placeholder='Select a role'
                       className='col-span-4'
-                      disabled={!isAdmin}
+                      disabled={!canManageUsers}
                       items={roles.map(({ label, value }) => ({
                         label,
                         value,
                       }))}
                     />
-                    {!isAdmin && (
+                    {!canManageUsers && (
                       <p className='col-span-4 col-start-3 text-xs text-muted-foreground'>
-                        Only admins can change user roles.
+                        Only admins or superusers can change user roles.
                       </p>
                     )}
                     <FormMessage className='col-span-4 col-start-3' />

@@ -27,6 +27,9 @@ import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { NewChat } from './components/new-chat'
 import { type ChatUser, type Convo } from './data/chat-types'
+import { useUser } from '@clerk/react'
+import { clerkUsers } from '@/lib/clerk-users-api'
+import { clerkUserToUser } from '@/lib/clerk-mapper'
 // Fake Data
 import { conversations as rawConversations } from './data/convo.json'
 
@@ -42,6 +45,7 @@ export function Chats() {
     useState(false)
   const [messageText, setMessageText] = useState('')
   const [chatMessages, setChatMessages] = useState<Record<string, Convo[]>>({})
+  const [directoryUsers, setDirectoryUsers] = useState<ChatUser[]>([])
 
   // Filtered data based on the search query
   const filteredChatList = conversations.filter(({ fullName }) =>

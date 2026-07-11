@@ -29,6 +29,7 @@ export function clerkUserToUser(clerk: ClerkUser): User {
     username: clerk.username ?? '',
     phone_number: phone,
     role,
+    isSuperuser: Boolean(clerk.public_metadata?.isSuperuser),
     status,
     clerk_user_id: clerk.id,
     created_at: new Date(clerk.created_at),

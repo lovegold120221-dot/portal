@@ -8,6 +8,9 @@ type CurrentUser = {
   user: User | null
   role: User['role'] | null
   isAdmin: boolean
+  isSuperuser: boolean
+  canManageUsers: boolean
+  canManageApps: boolean
   isLoading: boolean
 }
 
@@ -50,10 +53,15 @@ export function useCurrentUser(): CurrentUser {
     }
   }, [clerkUser, isLoaded])
 
+  const isAdmin = dbUser?.role === 'admin'
+  const isSuperuser = Boolean(dbUser?.isSuperuser)
   return {
     user: dbUser,
     role: dbUser?.role ?? null,
-    isAdmin: dbUser?.role === 'admin',
+    isAdmin,
+    isSuperuser,
+    canManageUsers: isAdmin || isSuperuser,
+    canManageApps: isAdmin || isSuperuser,
     isLoading,
   }
 }

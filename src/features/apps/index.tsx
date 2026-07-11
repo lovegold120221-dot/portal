@@ -27,7 +27,7 @@ import {
   Workflow,
   X,
 } from 'lucide-react'
-import { getApps, addApp } from '@/lib/supabase-apps'
+import { getApps, addApp, updateApp, deleteApp } from '@/lib/supabase-apps'
 import { getServices, setServiceConnected } from '@/lib/supabase-queries'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { Badge } from '@/components/ui/badge'
@@ -162,7 +162,7 @@ const devUsers = allUsers.filter(
 )
 
 export function Apps() {
-  const { isAdmin } = useCurrentUser()
+  const { canManageApps } = useCurrentUser()
   const [tab, setTab] = useState<Tab>('apps')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPlatform, setSelectedPlatform] = useState<string>(

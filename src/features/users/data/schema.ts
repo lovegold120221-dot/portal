@@ -24,6 +24,7 @@ export const _userSchema = z.object({
   username: z.string(),
   phone_number: z.string(),
   role: userRoleSchema,
+  isSuperuser: z.boolean().optional(),
   status: userStatusSchema,
   clerk_user_id: z.string().nullable().optional(),
   created_at: z.coerce.date(),
