@@ -604,8 +604,25 @@ create trigger on_conversations_update
   for each row execute function public.set_conversation_updated_at();
 
 -- Realtime --------------------------------------------------------------------
-alter publication supabase_realtime add table public.messages;
-alter publication supabase_realtime add table public.conversations;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'messages'
+  ) then
+    alter publication supabase_realtime add table public.messages;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'conversations'
+  ) then
+    alter publication supabase_realtime add table public.conversations;
+  end if;
+end $$;
 
 -- Row Level Security (permissive for Clerk/anon dev; see hardening note above)
 alter table public.conversations enable row level security;
