@@ -65,3 +65,16 @@ export type ClerkUpdateUserPayload = {
     isSuperuser?: boolean
   }
 }
+
+export type ClerkInvitation = {
+  id: string
+  email_address: string
+  public_metadata?: {
+    role?: UserRole
+    status?: UserStatus
+    note?: string
+  }
+  status: 'pending' | 'accepted' | 'revoked' | 'expired'
+  created_at: number
+  updated_at: number
+}

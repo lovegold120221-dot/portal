@@ -14,12 +14,44 @@ import {
   Send,
   Video,
   MessagesSquare,
+  VolumeX,
+  Volume2,
+  LogOut,
+  Eraser,
+  Loader2,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { clerkUserToUser } from '@/lib/clerk-mapper'
 import { clerkUsers } from '@/lib/clerk-users-api'
+import { supabase } from '@/lib/supabase'
+import {
+  type ChatMessage,
+  type Conversation,
+  clearMessages,
+  createGroupConversation,
+  getOrCreateDirectConversation,
+  leaveConversation,
+  listConversations,
+  markRead,
+  sendMessage,
+  uploadAttachment,
+} from '@/lib/supabase-chats'
 import { cn, getDisplayNameInitials } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { ConfigDrawer } from '@/components/config-drawer'
@@ -30,16 +62,6 @@ import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { NewChat } from './components/new-chat'
 import { type ChatUser } from './data/chat-types'
-import { supabase } from '@/lib/supabase'
-import {
-  type ChatMessage,
-  type Conversation,
-  createGroupConversation,
-  getOrCreateDirectConversation,
-  listConversations,
-  markRead,
-  sendMessage,
-} from '@/lib/supabase-chats'
 
 export function Chats() {
   const { user: clerkUser } = useUser()
@@ -56,6 +78,13 @@ export function Chats() {
   const [createConversationDialogOpened, setCreateConversationDialog] =
     useState(false)
   const [messageText, setMessageText] = useState('')
+  const [muted, setMuted] = useState<Set<string>>(new Set())
+  const mutedRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    mutedRef.current = muted
+  }, [muted])
+  const [call, setCall] = useState<{ type: 'video' | 'audio' } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const selectedIdRef = useRef<string | null>(null)
   useEffect(() => {
@@ -107,11 +136,12 @@ export function Chats() {
               if (c.messages.some((m) => m.id === msg.id)) return c
               const isMine = msg.senderId === meId
               const isOpen = selectedIdRef.current === c.id
+              const isMuted = mutedRef.current.has(c.id)
               return {
                 ...c,
                 messages: [...c.messages, msg],
                 lastMessageAt: msg.createdAt,
-                unread: isMine || isOpen ? 0 : c.unread + 1,
+                unread: isMine || isOpen || isMuted ? 0 : c.unread + 1,
               }
             })
           )
@@ -182,14 +212,18 @@ export function Chats() {
   const selectedPeer = selectedConversation?.members.find(
     (m) => m.userId !== meId
   )
-  const selectedPeerUser = selectedPeer ? directoryById[selectedPeer.userId] : undefined
+  const selectedPeerUser = selectedPeer
+    ? directoryById[selectedPeer.userId]
+    : undefined
   const selectedTitle = selectedIsGroup
     ? (selectedConversation?.name ?? 'Group')
     : (selectedPeerUser?.fullName ?? selectedPeer?.userId ?? '')
   const selectedSubtitle = selectedIsGroup
     ? `${selectedConversation?.members.length} members`
     : (selectedPeerUser?.title ?? '')
-  const selectedProfile = selectedIsGroup ? '' : (selectedPeerUser?.profile ?? '')
+  const selectedProfile = selectedIsGroup
+    ? ''
+    : (selectedPeerUser?.profile ?? '')
 
   const currentMessage = useMemo(() => {
     const messages = selectedConversation?.messages ?? []
@@ -246,12 +280,101 @@ export function Chats() {
       setConversations((prev) =>
         prev.map((c) =>
           c.id === selectedConversationId
-            ? { ...c, messages: [...c.messages, saved], lastMessageAt: saved.createdAt }
+            ? {
+                ...c,
+                messages: [...c.messages, saved],
+                lastMessageAt: saved.createdAt,
+              }
             : c
         )
       )
     } catch {
       // Failed to send
+    }
+  }
+
+  const toggleMute = (convId: string) => {
+    setMuted((prev) => {
+      const next = new Set(prev)
+      if (next.has(convId)) {
+        next.delete(convId)
+        toast.success('Unmuted conversation')
+      } else {
+        next.add(convId)
+        toast.success('Muted conversation')
+      }
+      return next
+    })
+  }
+
+  const handleClearMessages = async () => {
+    if (!selectedConversationId) return
+    try {
+      await clearMessages(selectedConversationId)
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === selectedConversationId
+            ? { ...c, messages: [], unread: 0 }
+            : c
+        )
+      )
+      toast.success('Conversation cleared')
+    } catch {
+      toast.error('Failed to clear conversation')
+    }
+  }
+
+  const handleLeave = async () => {
+    if (!selectedConversationId || !meId) return
+    try {
+      await leaveConversation(selectedConversationId, meId)
+      setConversations((prev) =>
+        prev.filter((c) => c.id !== selectedConversationId)
+      )
+      setSelectedConversationId(null)
+      setMobileSelectedConversationId(null)
+      toast.success('Left conversation')
+    } catch {
+      toast.error('Failed to leave conversation')
+    }
+  }
+
+  const attachIsImageRef = useRef(false)
+  const openFilePicker = (isImage: boolean) => {
+    attachIsImageRef.current = isImage
+    const input = fileInputRef.current
+    if (input) {
+      input.accept = isImage ? 'image/*' : '*/*'
+      input.click()
+    }
+  }
+
+  const handleAttach = async (file: File) => {
+    if (!selectedConversationId || !meId) return
+    const isImage = attachIsImageRef.current
+    try {
+      let body: string
+      try {
+        const url = await uploadAttachment(selectedConversationId, file)
+        body = `${isImage ? '🖼️' : '📎'} ${file.name}\n${url}`
+      } catch {
+        body = `${isImage ? '🖼️' : '📎'} ${file.name}`
+        toast.warning('Attachment upload failed; shared as a file name.')
+      }
+      const saved = await sendMessage(selectedConversationId, meId, body)
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === selectedConversationId
+            ? {
+                ...c,
+                messages: [...c.messages, saved],
+                lastMessageAt: saved.createdAt,
+              }
+            : c
+        )
+      )
+    } catch {
+      toast.error('Failed to send attachment')
     }
   }
 
@@ -333,7 +456,7 @@ export function Chats() {
                             </AvatarFallback>
                           </Avatar>
                           {conv.unread > 0 && (
-                            <span className='absolute -top-1 -end-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground'>
+                            <span className='absolute -end-1 -top-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground'>
                               {conv.unread}
                             </span>
                           )}
@@ -409,6 +532,7 @@ export function Chats() {
                   <Button
                     size='icon'
                     variant='ghost'
+                    onClick={() => setCall({ type: 'video' })}
                     className='hidden size-8 rounded-full sm:inline-flex lg:size-10'
                   >
                     <Video size={22} className='stroke-muted-foreground' />
@@ -416,17 +540,52 @@ export function Chats() {
                   <Button
                     size='icon'
                     variant='ghost'
+                    onClick={() => setCall({ type: 'audio' })}
                     className='hidden size-8 rounded-full sm:inline-flex lg:size-10'
                   >
                     <Phone size={22} className='stroke-muted-foreground' />
                   </Button>
-                  <Button
-                    size='icon'
-                    variant='ghost'
-                    className='h-10 rounded-md sm:h-8 sm:w-4 lg:h-10 lg:w-6'
-                  >
-                    <MoreVertical className='stroke-muted-foreground sm:size-5' />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size='icon'
+                        variant='ghost'
+                        className='h-10 rounded-md sm:h-8 sm:w-4 lg:h-10 lg:w-6'
+                      >
+                        <MoreVertical className='stroke-muted-foreground sm:size-5' />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='end'>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          selectedConversationId &&
+                          toggleMute(selectedConversationId)
+                        }
+                      >
+                        {selectedConversationId &&
+                        muted.has(selectedConversationId) ? (
+                          <Volume2 className='me-2 size-4' />
+                        ) : (
+                          <VolumeX className='me-2 size-4' />
+                        )}
+                        {selectedConversationId &&
+                        muted.has(selectedConversationId)
+                          ? 'Unmute'
+                          : 'Mute'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleClearMessages}>
+                        <Eraser className='me-2 size-4' />
+                        Clear messages
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={handleLeave}
+                        className='text-destructive focus:text-destructive'
+                      >
+                        <LogOut className='me-2 size-4' />
+                        Leave conversation
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
 
@@ -475,6 +634,7 @@ export function Chats() {
                         size='icon'
                         type='button'
                         variant='ghost'
+                        onClick={() => openFilePicker(false)}
                         className='h-8 rounded-md'
                       >
                         <Plus size={20} className='stroke-muted-foreground' />
@@ -483,6 +643,7 @@ export function Chats() {
                         size='icon'
                         type='button'
                         variant='ghost'
+                        onClick={() => openFilePicker(true)}
                         className='hidden h-8 rounded-md lg:inline-flex'
                       >
                         <ImagePlus
@@ -494,6 +655,7 @@ export function Chats() {
                         size='icon'
                         type='button'
                         variant='ghost'
+                        onClick={() => openFilePicker(false)}
                         className='hidden h-8 rounded-md lg:inline-flex'
                       >
                         <Paperclip
@@ -502,6 +664,16 @@ export function Chats() {
                         />
                       </Button>
                     </div>
+                    <input
+                      ref={fileInputRef}
+                      type='file'
+                      className='hidden'
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) handleAttach(file)
+                        e.target.value = ''
+                      }}
+                    />
                     <label className='flex-1'>
                       <span className='sr-only'>Chat Text Box</span>
                       <input
@@ -557,6 +729,43 @@ export function Chats() {
           onStartConversation={handleStartConversation}
         />
       </Main>
+
+      <Dialog open={call !== null} onOpenChange={(o) => !o && setCall(null)}>
+        <DialogContent className='sm:max-w-sm'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              {call?.type === 'video' ? (
+                <Video className='size-5' />
+              ) : (
+                <Phone className='size-5' />
+              )}
+              {call?.type === 'video' ? 'Video' : 'Voice'} call
+            </DialogTitle>
+            <DialogDescription>
+              Calling {selectedTitle || 'unknown'}…
+            </DialogDescription>
+          </DialogHeader>
+          <div className='flex flex-col items-center gap-6 py-4'>
+            <Avatar className='size-20'>
+              <AvatarImage src={selectedProfile} alt={selectedTitle} />
+              <AvatarFallback>
+                {getDisplayNameInitials(selectedTitle)}
+              </AvatarFallback>
+            </Avatar>
+            <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+              <Loader2 className='size-4 animate-spin' />
+              Ringing…
+            </div>
+            <Button
+              variant='destructive'
+              className='w-full'
+              onClick={() => setCall(null)}
+            >
+              End call
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

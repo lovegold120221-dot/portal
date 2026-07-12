@@ -3,7 +3,6 @@ import { Check, X } from 'lucide-react'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Command,
   CommandEmpty,
@@ -19,15 +18,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { type ChatUser } from '../data/chat-types'
 
-type User = Omit<ChatUser, 'messages'>
-
 type NewChatProps = {
-  users: User[]
+  users: ChatUser[]
   open: boolean
   onOpenChange: (open: boolean) => void
-  onStartConversation: (users: User[], groupName?: string) => void
+  onStartConversation: (users: ChatUser[], groupName?: string) => void
 }
 export function NewChat({
   users,
@@ -35,10 +33,10 @@ export function NewChat({
   open,
   onStartConversation,
 }: NewChatProps) {
-  const [selectedUsers, setSelectedUsers] = useState<User[]>([])
+  const [selectedUsers, setSelectedUsers] = useState<ChatUser[]>([])
   const [groupName, setGroupName] = useState('')
 
-  const handleSelectUser = (user: User) => {
+  const handleSelectUser = (user: ChatUser) => {
     if (!selectedUsers.find((u) => u.id === user.id)) {
       setSelectedUsers([...selectedUsers, user])
     } else {

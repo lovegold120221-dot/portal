@@ -1,6 +1,7 @@
 import axios from 'axios'
 import {
   type ClerkCreateUserPayload,
+  type ClerkInvitation,
   type ClerkListResponse,
   type ClerkUpdateUserPayload,
   type ClerkUser,
@@ -43,10 +44,40 @@ async function deleteUser(userId: string): Promise<void> {
   await client.delete(`/users/${userId}`)
 }
 
+async function inviteUser(payload: {
+  emailAddress: string
+  role?: string
+  note?: string
+  redirectUrl?: string
+}): Promise<ClerkInvitation> {
+  const { data } = await client.post('/invitations', {
+    email_address: payload.emailAddress,
+    redirect_url: payload.redirectUrl ?? `${window.location.origin}/`,
+    public_metadata: {
+      role: payload.role,
+      status: 'invited',
+      note: payload.note,
+    },
+  })
+  return data as ClerkInvitation
+}
+
+async function setUserStatus(
+  userId: string,
+  status: 'active' | 'inactive'
+): Promise<ClerkUser> {
+  const { data } = await client.patch(`/users/${userId}`, {
+    public_metadata: { status },
+  })
+  return data as ClerkUser
+}
+
 export const clerkUsers = {
   listUsers,
   getUser,
   createUser,
   updateUser,
   deleteUser,
+  inviteUser,
+  setUserStatus,
 }

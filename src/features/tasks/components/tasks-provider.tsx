@@ -21,23 +21,24 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTasks(getTasks())
     return subscribeTasks(() => setTasks(getTasks()))
-      }, [])
+  }, [])
 
   return (
-       <TasksContext
-         value={{
-          open,
-          setOpen,
-          currentRow,
-          setCurrentRow,
-          data: tasks,
-           }}
-         >
-           {children}
-         </TasksContext>
-       )
+    <TasksContext
+      value={{
+        open,
+        setOpen,
+        currentRow,
+        setCurrentRow,
+        data: tasks,
+      }}
+    >
+      {children}
+    </TasksContext>
+  )
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -45,6 +46,6 @@ export const useTasks = () => {
   const tasksContext = useContext(TasksContext)
   if (!tasksContext) {
     throw new Error('useTasks has to be used within <TasksContext>')
-       }
-    return tasksContext
-      }
+  }
+  return tasksContext
+}

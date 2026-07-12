@@ -47,7 +47,9 @@ const toMessage = (m: DbMessage): ChatMessage => ({
 
 const MESSAGES_PER_PAGE = 50
 
-export async function listConversations(userId: string): Promise<Conversation[]> {
+export async function listConversations(
+  userId: string
+): Promise<Conversation[]> {
   const { data, error } = await supabase
     .from('conversation_members')
     .select(
@@ -58,11 +60,7 @@ export async function listConversations(userId: string): Promise<Conversation[]>
       conversations (
         id, type, name, created_by, created_at, last_message_at,
         conversation_members ( user_id, role, last_read_at ),
-        messages (
-          id, conversation_id, sender_id, body, created_at, reply_to,
-          order by created_at desc,
-          limit ${MESSAGES_PER_PAGE}
-        )
+        messages ( id, conversation_id, sender_id, body, created_at, reply_to )
       )
     `
     )
@@ -78,7 +76,11 @@ export async function listConversations(userId: string): Promise<Conversation[]>
       created_by: string | null
       created_at: string
       last_message_at: string | null
-      conversation_members: { user_id: string; role: string; last_read_at: string | null }[]
+      conversation_members: {
+        user_id: string
+        role: string
+        last_read_at: string | null
+      }[]
       messages: DbMessage[]
     }
 
@@ -87,14 +89,11 @@ export async function listConversations(userId: string): Promise<Conversation[]>
         userId: m.user_id,
         role: m.role === 'admin' ? 'admin' : 'member',
         lastReadAt: m.last_read_at,
-      }
+      })
     )
 
     const myLastRead = (row.last_read_at as string | null) ?? '1970-01-01'
-    const messages: ChatMessage[] = (c.messages ?? [])
-      .slice()
-      .reverse()
-      .map(toMessage)
+    const messages: ChatMessage[] = (c.messages ?? []).map(toMessage)
 
     const unread = messages.filter(
       (m) => m.senderId !== userId && m.createdAt > myLastRead
@@ -265,4 +264,54 @@ export function subscribeMessages(
     .subscribe()
 
   return channel
+}
+
+export async function leaveConversation(
+  conversationId: string,
+  userId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('conversation_members')
+    .delete()
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId)
+
+  if (error) throw error
+}
+
+export async function clearMessages(conversationId: string): Promise<void> {
+  const { error } = await supabase
+    .from('messages')
+    .delete()
+    .eq('conversation_id', conversationId)
+
+  if (error) throw error
+}
+
+const ATTACHMENT_BUCKET = 'chat-attachments'
+
+export async function uploadAttachment(
+  conversationId: string,
+  file: File
+): Promise<string> {
+  try {
+    await supabase.storage.createBucket(ATTACHMENT_BUCKET, {
+      public: true,
+    })
+  } catch {
+    // Bucket may already exist — ignore.
+  }
+
+  const path = `${conversationId}/${Date.now()}-${file.name}`
+  const { data, error } = await supabase.storage
+    .from(ATTACHMENT_BUCKET)
+    .upload(path, file, { upsert: true })
+
+  if (error) throw error
+
+  const { data: urlData } = supabase.storage
+    .from(ATTACHMENT_BUCKET)
+    .getPublicUrl(data.path)
+
+  return urlData.publicUrl
 }

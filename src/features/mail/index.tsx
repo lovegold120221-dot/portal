@@ -96,6 +96,7 @@ export function MailFeature() {
   // Only fetch mailboxes if user has ebrun-branded email
   useEffect(() => {
     if (!userMailAccess) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingMailbox(false)
       return
     }
@@ -153,6 +154,7 @@ export function MailFeature() {
   useEffect(() => {
     if (!mailbox) return
     if (!userMailAccess) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingMessages(false)
       return
     }

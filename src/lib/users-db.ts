@@ -23,6 +23,7 @@ export async function fetchUsers(): Promise<UserRow[]> {
      .order('created_at', { ascending: false })
 
   if (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to fetch users:', error)
     return []
    }
@@ -40,6 +41,7 @@ export async function createUser(
      .single()
 
   if (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to create user:', error)
     return null
    }
@@ -59,6 +61,7 @@ export async function updateUser(
      .single()
 
   if (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to update user:', error)
     return null
    }
@@ -70,6 +73,7 @@ export async function deleteUser(id: string): Promise<boolean> {
   const { error } = await supabase.from('users').delete().eq('id', id)
 
   if (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to delete user:', error)
     return false
    }
@@ -95,10 +99,12 @@ export async function inviteUser(
    ])
 
   if (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to invite user:', error)
     return false
    }
 
+  // eslint-disable-next-line no-console
   console.log(`Invite sent to ${email} with role ${role}${desc ? `: ${desc}` : ''}`)
   return true
 }
