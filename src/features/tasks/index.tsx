@@ -8,39 +8,38 @@ import { TasksDialogs } from './components/tasks-dialogs'
 import { TasksPrimaryButtons } from './components/tasks-primary-buttons'
 import { TasksProvider, useTasks } from './components/tasks-provider'
 import { TasksTable } from './components/tasks-table'
-import { getTasks } from '@/lib/task-store'
 
 export function Tasks() {
   return (
-      <TasksProvider>
-        <Header fixed>
-          <Search className='me-auto' />
-          <ThemeSwitch />
-          <ConfigDrawer />
-          <ProfileDropdown />
-        </Header>
+       <TasksProvider>
+         <Header fixed>
+           <Search className='me-auto' />
+           <ThemeSwitch />
+           <ConfigDrawer />
+           <ProfileDropdown />
+         </Header>
 
-        <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
-          <div className='flex flex-wrap items-end justify-between gap-2'>
-            <div>
-              <h2 className='text-2xl font-bold tracking-tight'>Tasks</h2>
-              <p className='text-muted-foreground'>
-                Here's a list of your tasks for this month!
-              </p>
-            </div>
-            <TasksPrimaryButtons />
-          </div>
-          <TasksInner />
-        </Main>
+         <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
+           <div className='flex flex-wrap items-end justify-between gap-2'>
+             <div>
+               <h2 className='text-2xl font-bold tracking-tight'>Tasks</h2>
+               <p className='text-muted-foreground'>
+                 Here's a list of your tasks for this month!
+               </p>
+             </div>
+             <TasksPrimaryButtons />
+           </div>
+           <TasksInner />
+         </Main>
 
-        <TasksDialogs />
-      </TasksProvider>
-    )
+         <TasksDialogs />
+       </TasksProvider>
+     )
  }
 
 function TasksInner() {
-  const tasks = getTasks()
+  const { data } = useTasks()
   return (
-      <TasksTable data={tasks} />
-    )
+       <TasksTable data={data} />
+     )
  }

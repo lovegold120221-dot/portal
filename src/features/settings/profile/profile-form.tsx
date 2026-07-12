@@ -4,7 +4,7 @@ import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
 import { useUser } from '@clerk/react'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,40 +28,39 @@ import { Textarea } from '@/components/ui/textarea'
 
 const profileFormSchema = z.object({
   username: z
-    .string('Please enter your username.')
-    .min(2, 'Username must be at least 2 characters.')
-    .max(30, 'Username must not be longer than 30 characters.'),
+     .string('Please enter your username.')
+     .min(2, 'Username must be at least 2 characters.')
+     .max(30, 'Username must not be longer than 30 characters.'),
   email: z.email({
     error: (iss) =>
       iss.input === undefined
         ? 'Please select an email to display.'
         : undefined,
-  }),
+   }),
   bio: z.string().max(160).min(4),
   urls: z
-    .array(
-      z.object({
-        value: z.url('Please enter a valid URL.'),
-      })
-    )
-    .optional(),
+     .array(
+       z.object({
+         value: z.url('Please enter a valid URL.'),
+        })
+      )
+     .optional(),
 })
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>
 
-// This can come from your database or API.
 const defaultValues: Partial<ProfileFormValues> = {
   bio: '',
   urls: [],
 }
 
 export function ProfileForm() {
-  const { user, isLoaded } = useUser()
+  const { user, isLoaded, isSignedIn } = useUser()
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues,
     mode: 'onChange',
-  })
+    })
 
   useEffect(() => {
     if (isLoaded && user) {
@@ -70,124 +69,137 @@ export function ProfileForm() {
         email: user.primaryEmailAddress?.emailAddress ?? '',
         bio: '',
         urls: user.externalAccounts?.length
-          ? user.externalAccounts
-              .map((acc) => acc.username)
-              .filter(Boolean)
-              .map((u) => ({ value: `https://${u}` }))
-          : [],
-      })
-    }
-  }, [isLoaded, user, form])
+           ? user.externalAccounts
+               .map((acc) => acc.username)
+               .filter(Boolean)
+               .map((u) => ({ value: `https://${u}` }))
+           : [],
+       })
+     }
+    }, [isLoaded, user, form])
 
   const { fields, append } = useFieldArray({
     name: 'urls',
     control: form.control,
-  })
+    })
+
+  const onSubmit = async (data: ProfileFormValues) => {
+    if (!isSignedIn) {
+      toast.error('You must be signed in to update your profile.')
+      return
+     }
+    try {
+      await user?.update({ username: data.username })
+      toast.success('Profile updated successfully.')
+      } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update profile.')
+      }
+    }
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit((data) => showSubmittedData(data))}
-        className='space-y-8'
-      >
-        <FormField
-          control={form.control}
-          name='username'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Username</FormLabel>
-              <FormControl>
-                <Input placeholder='Eburon' {...field} />
-              </FormControl>
-              <FormDescription>
-                This is your public display name. It can be your real name or a
-                pseudonym. You can only change this once every 30 days.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name='email'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select a verified email to display' />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value='m@example.com'>m@example.com</SelectItem>
-                  <SelectItem value='m@google.com'>m@google.com</SelectItem>
-                  <SelectItem value='m@support.com'>m@support.com</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormDescription>
-                You can manage verified email addresses in your{' '}
-                <Link to='/'>email settings</Link>.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name='bio'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Bio</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder='Tell us a little bit about yourself'
-                  className='resize-none'
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                You can <span>@mention</span> other users and organizations to
-                link to them.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div>
-          {fields.map((field, index) => (
-            <FormField
-              control={form.control}
-              key={field.id}
-              name={`urls.${index}.value`}
-              render={({ field }) => (
+      <Form {...form}>
+        <form
+         onSubmit={form.handleSubmit(onSubmit)}
+         className='space-y-8'
+         >
+           <FormField
+            control={form.control}
+            name='username'
+            render={({ field }) => (
                 <FormItem>
-                  <FormLabel className={cn(index !== 0 && 'sr-only')}>
-                    URLs
-                  </FormLabel>
-                  <FormDescription className={cn(index !== 0 && 'sr-only')}>
-                    Add links to your website, blog, or social media profiles.
-                  </FormDescription>
-                  <FormControl className={cn(index !== 0 && 'mt-1.5')}>
-                    <Input {...field} />
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <Input placeholder='Eburon' {...field} />
                   </FormControl>
+                  <FormDescription>
+                    This is your public display name. It can be your real name or a
+                    pseudonym. You can only change this once every 30 days.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          ))}
-          <Button
-            type='button'
-            variant='outline'
-            size='sm'
-            className='mt-2'
-            onClick={() => append({ value: '' })}
-          >
-            Add URL
-          </Button>
-        </div>
-        <Button type='submit'>Update profile</Button>
-      </form>
-    </Form>
-  )
+           <FormField
+            control={form.control}
+            name='email'
+            render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder='Select a verified email to display' />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value='m@example.com'>m@example.com</SelectItem>
+                      <SelectItem value='m@google.com'>m@google.com</SelectItem>
+                      <SelectItem value='m@support.com'>m@support.com</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    You can manage verified email addresses in your{' '}
+                     <Link to='/'>email settings</Link>.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+           <FormField
+            control={form.control}
+            name='bio'
+            render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bio</FormLabel>
+                  <FormControl>
+                    <Textarea
+                     placeholder='Tell us a little bit about yourself'
+                     className='resize-none'
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    You can <span>@mention</span> other users and organizations to
+                    link to them.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+           <div>
+             {fields.map((field, index) => (
+                <FormField
+                 control={form.control}
+                 key={field.id}
+                 name={`urls.${index}.value`}
+                 render={({ field }) => (
+                     <FormItem>
+                       <FormLabel className={cn(index !== 0 && 'sr-only')}>
+                        URLs
+                       </FormLabel>
+                       <FormDescription className={cn(index !== 0 && 'sr-only')}>
+                        Add links to your website, blog, or social media profiles.
+                       </FormDescription>
+                       <FormControl className={cn(index !== 0 && 'mt-1.5')}>
+                         <Input {...field} />
+                       </FormControl>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+               )}
+             <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              className='mt-2'
+              onClick={() => append({ value: '' })}
+              >
+               Add URL
+              </Button>
+            </div>
+           <Button type='submit'>Update profile</Button>
+         </form>
+       </Form>
+     )
 }

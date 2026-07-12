@@ -10,6 +10,7 @@ type TasksContextType = {
   setOpen: (str: TasksDialogType | null) => void
   currentRow: Task | null
   setCurrentRow: React.Dispatch<React.SetStateAction<Task | null>>
+  data: Task[]
 }
 
 const TasksContext = createContext<TasksContextType | null>(null)
@@ -22,27 +23,28 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setTasks(getTasks())
     return subscribeTasks(() => setTasks(getTasks()))
-   }, [])
+      }, [])
 
   return (
-     <TasksContext
-       value={{
-        open,
-        setOpen,
-        currentRow,
-        setCurrentRow,
-       }}
-     >
-       {children}
-     </TasksContext>
-   )
- }
+       <TasksContext
+         value={{
+          open,
+          setOpen,
+          currentRow,
+          setCurrentRow,
+          data: tasks,
+           }}
+         >
+           {children}
+         </TasksContext>
+       )
+}
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useTasks = () => {
   const tasksContext = useContext(TasksContext)
   if (!tasksContext) {
     throw new Error('useTasks has to be used within <TasksContext>')
-   }
-  return tasksContext
-}
+       }
+    return tasksContext
+      }
