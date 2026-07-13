@@ -409,6 +409,10 @@ create table if not exists public.models (
   created_at timestamptz not null default now()
 );
 
+-- Author (default owner of each model)
+alter table public.models add column if not exists author text not null default 'Master E';
+update public.models set author = 'Master E' where author is distinct from 'Master E';
+
 alter table public.models enable row level security;
 
 drop policy if exists "Models are readable by everyone"
