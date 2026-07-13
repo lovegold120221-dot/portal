@@ -1,54 +1,48 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node'
-
 const HOSTINGER_BASE = 'https://api.mail.hostinger.com'
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: Request): Promise<Response> {
   const token = process.env.HOSTINGER_MAIL_TOKEN
   if (!token) {
-    return res.status(500).json({ error: 'HOSTINGER_MAIL_TOKEN not configured' })
+    return new Response(
+      JSON.stringify({ error: 'HOSTINGER_MAIL_TOKEN not configured' }),
+      { status: 500, headers: { 'content-type': 'application/json' } },
+    )
   }
 
-  const path = Array.isArray(req.query.path)
-    ? req.query.path.join('/')
-    : (req.query.path as string) || ''
+  const url = new URL(req.url)
+  const prefix = '/api/mail'
+  let path = url.pathname.startsWith(prefix)
+    ? url.pathname.slice(prefix.length)
+    : url.pathname
+  path = path.replace(/^\//, '')
 
-  const url = `${HOSTINGER_BASE}/api/v1/${path}`
-
-  const searchParams = new URLSearchParams()
-  for (const [key, value] of Object.entries(req.query)) {
-    if (key === 'path') continue
-    const values = Array.isArray(value) ? value : [value]
-    for (const v of values) {
-      if (v !== undefined) searchParams.append(key, String(v))
-    }
-  }
-  const queryString = searchParams.toString()
-  const fullUrl = queryString ? `${url}?${queryString}` : url
+  const target = new URL(`${HOSTINGER_BASE}/api/v1/${path}`)
+  url.searchParams.forEach((value, key) => target.searchParams.append(key, value))
 
   const init: RequestInit = {
-    method: req.method || 'GET',
+    method: req.method,
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   }
 
-  if (req.method && req.method !== 'GET' && req.method !== 'HEAD') {
-    init.body = JSON.stringify(req.body)
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    init.body = await req.text()
   }
 
   try {
-    const response = await fetch(fullUrl, init)
+    const response = await fetch(target.toString(), init)
     const contentType = response.headers.get('content-type') || ''
-
-    if (contentType.includes('application/json')) {
-      const data = await response.json()
-      return res.status(response.status).json(data)
-    }
-
-    const text = await response.text()
-    return res.status(response.status).send(text)
+    const body = await response.text()
+    return new Response(body, {
+      status: response.status,
+      headers: { 'content-type': contentType || 'application/json' },
+    })
   } catch {
-    return res.status(502).json({ error: 'Failed to reach Hostinger Mail API' })
+    return new Response(
+      JSON.stringify({ error: 'Failed to reach Hostinger Mail API' }),
+      { status: 502, headers: { 'content-type': 'application/json' } },
+    )
   }
 }
