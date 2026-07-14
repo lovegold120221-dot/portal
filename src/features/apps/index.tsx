@@ -804,10 +804,7 @@ type AppDetailsPanelProps = {
 
 function AppDetailsPanel({
   app,
-  statusColors,
-  devUsers,
   appAssignees,
-  onToggleAssign,
   onClose,
   canManageApps,
   onEdit,
@@ -900,198 +897,202 @@ function AppDetailsPanel({
 
           {/* ── 📋 RIGHT: Stacked Cards (scrollable on desktop) ── */}
           <div className='flex min-w-0 flex-1 flex-col gap-8 lg:max-h-full lg:overflow-y-auto'>
-            {/* App name header */}
-            <div className='flex items-center gap-3'>
-              <h1 className='text-2xl font-bold tracking-tight'>{app.name}</h1>
-            </div>
 
+               <div className='space-y-4'>
+                 {/* App Name Header */}
+                 <div>
+                   <h1 className='text-2xl font-bold tracking-tight'>
+                     {app.name}
+                   </h1>
+                   <p className='text-sm text-muted-foreground mt-1'>
+                     {app.url}
+                   </p>
+                 </div>
 
-              <Tabs defaultValue='status' className='w-full'>
-                <TabsList className='grid w-full grid-cols-3'>
-                  <TabsTrigger value='status'>Status</TabsTrigger>
-                  <TabsTrigger value='users'>Users</TabsTrigger>
-                  <TabsTrigger value='code'>
-                    <Code2 className='mr-1.5 size-3.5' />
-                  Source Code
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value='status' className='mt-4 space-y-3'>
-                  <div className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'>
-                    <div
-                    className={`rounded px-3 py-1 text-xs font-semibold ${
-                      statusColors[app.status ?? ''] ||
-                        'bg-muted text-muted-foreground'
-                    }`}
-                    >
-                      {app.status || 'Unknown'}
-                    </div>
-                    <span className='text-sm text-muted-foreground'>
-                      {app.status === 'Stable'
-                        ? 'Production ready'
-                        : app.status === 'Beta'
-                          ? 'Feature complete, testing'
-                          : app.status === 'Alpha'
-                            ? 'Early development'
-                            : 'Status not set'}
-                    </span>
-                  </div>
-                </TabsContent>
-                <TabsContent value='users' className='mt-4 space-y-3'>
-                  {appAssignees[app.name] && appAssignees[app.name].length > 0 ? (
-                    <div className='space-y-2'>
-                      {appAssignees[app.name].map((user) => (
-                        <div
-                        key={user.id}
-                        className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'
-                        >
-                          <div className='flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary'>
-                            {user.first_name[0]}
-                            {user.last_name[0]}
-                          </div>
-                          <div className='flex-1'>
-                            <p className='text-sm font-medium'>
-                              {user.first_name} {user.last_name}
-                            </p>
-                            <p className='text-xs text-muted-foreground'>
-                              {user.role}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className='rounded-xl border bg-card px-4 py-6 text-center'>
-                      <p className='text-sm text-muted-foreground'>
-                      No users assigned
-                      </p>
-                    </div>
-                  )}
-                </TabsContent>
-                <TabsContent value='code' className='mt-4 space-y-3'>
-                  <div className='rounded-xl border bg-card overflow-hidden'>
-                    <div className='flex items-center justify-between border-b px-4 py-2'>
-                      <span className='text-xs text-muted-foreground'>
-                        app.eburon.ai
-                      </span>
-                      <Button
-                      variant='ghost'
-                      size='sm'
-                      className='h-6 gap-1 text-[10px]'
-                      asChild
-                      >
-                        <a href={app.url} target='_blank' rel='noopener noreferrer'>
-                          <ExternalLink className='size-3' />
-                        Open
-                        </a>
-                      </Button>
-                    </div>
-                    <div className='bg-zinc-950 p-4 font-mono text-xs text-zinc-300 overflow-x-auto'>
-                      <pre className='leading-relaxed'>
-                        <code>{`<div className="app-container">
-  <header className="app-header">
-    <Logo />
-    <nav>...</nav>
-  </header>
-  <main>
-    <Dashboard />
-    <Assistant />
-  </main>
-</div>`}</code>
-                      </pre>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-              <div className='space-y-3'>
-                <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
-                 Assign Developers & Admins
-                </div>
-                 <div className='flex flex-wrap gap-2'>
-                {devUsers.map((user) => {
-                  const assigned = (appAssignees[app.name] || []).some(
-                    (u) => u.id === user.id
-                  )
-                  return (
-                    <button
-                      key={user.id}
-                      onClick={() => onToggleAssign(app.name, user)}
-                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                        assigned
-                          ? 'bg-secondary text-secondary-foreground'
-                          : 'border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                      }`}
-                    >
-                      {assigned && <X className='size-3 shrink-0 opacity-60' />}
-                      {user.first_name} {user.last_name}
-                      <span className='text-[10px] opacity-50'>
-                        ({user.role})
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+                 <Tabs defaultValue='information' className='w-full'>
+                   <TabsList className='grid w-full grid-cols-3'>
+                     <TabsTrigger value='information'>
+                       Information
+                     </TabsTrigger>
+                     <TabsTrigger value='users'>Users</TabsTrigger>
+                     <TabsTrigger value='code'>
+                       <Code2 className='mr-1.5 size-3.5' />
+                       Source Code
+                     </TabsTrigger>
+                   </TabsList>
 
-            {/* 4. Assigned Developers */}
-            {(appAssignees[app.name] || []).length > 0 && (
-              <div className='space-y-3'>
-                <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
-                  Assigned Developers
-                </div>
-                <div className='space-y-2'>
-                  {(appAssignees[app.name] || []).map((user) => (
-                    <div
-                      key={user.id}
-                      className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'
-                    >
-                      <div className='flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary'>
-                        {user.first_name[0]}
-                        {user.last_name[0]}
-                      </div>
-                      <div className='flex-1'>
+                   {/* ===== Information Tab ===== */}
+                   <TabsContent value='information' className='mt-4 space-y-3'>
+                     {/* Description */}
+                     <div className='rounded-xl border bg-card p-5'>
+                       <div className='mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase'>
+                        Description
+                       </div>
+                       <p className='text-[15px] leading-relaxed text-foreground/90'>
+                        {app.desc}
+                       </p>
+                     </div>
+
+                     {/* Preview Button */}
+                     <div className='space-y-3'>
+                       <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
+                        Preview
+                       </div>
+                       <Button
+                        variant='default'
+                        className='h-9 gap-2 text-xs'
+                        asChild
+                       >
+                         <a
+                          href={app.url}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                         >
+                           <ExternalLink className='size-3.5' />
+                          Open in New Window
+                         </a>
+                       </Button>
+                     </div>
+
+                     {/* Comment Input */}
+                     <div className='space-y-3'>
+                       <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
+                        Comment
+                       </div>
+                       <div className='rounded-xl border bg-card p-4'>
+                         <Textarea
+                          placeholder='Add your notes, feedback, or observations...'
+                          value={comment}
+                          onChange={(e) => {
+                            setComment(e.target.value)
+                            if (saved) setSaved(false)
+                          }}
+                          className='min-h-25 resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0'
+                         />
+                         <div className='mt-3 flex items-center justify-between border-t pt-3'>
+                          <span className='text-xs text-muted-foreground'>
+                           {saved ? 'Comment saved!' : ''}
+                          </span>
+                          <Button
+                           size='sm'
+                           className='h-8 gap-1.5 text-xs'
+                           onClick={handleSave}
+                           disabled={!comment.trim()}
+                          >
+                           {saved ? 'Saved' : 'Save Comment'}
+                          </Button>
+                         </div>
+                       </div>
+                     </div>
+                   </TabsContent>
+
+                   {/* ===== Users Tab ===== */}
+                   <TabsContent value='users' className='mt-4 space-y-3'>
+                     {appAssignees[app.name] && appAssignees[app.name].length > 0 ? (
+                       <div className='space-y-2'>
+                         {appAssignees[app.name].map((user) => (
+                           <div
+                            key={user.id}
+                            className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'
+                           >
+                             <div className='flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary'>
+                               {user.first_name[0]}
+                               {user.last_name[0]}
+                             </div>
+                             <div className='flex-1'>
+                               <p className='text-sm font-medium'>
+                                 {user.first_name} {user.last_name}
+                               </p>
+                               <p className='text-xs text-muted-foreground'>
+                                 {user.role}
+                               </p>
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                     ) : (
+                       <div className='rounded-xl border bg-card px-4 py-6 text-center'>
+                         <p className='text-sm text-muted-foreground'>
+                          No users assigned
+                         </p>
+                       </div>
+                     )}
+                   </TabsContent>
+
+                   {/* ===== Source Code Tab ===== */}
+                   <TabsContent value='code' className='mt-4 space-y-3'>
+                     {isDevOrAdmin ? (
+                       <>
+                         {/* Zip Upload */}
+                         <div className='space-y-3'>
+                           <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
+                            Upload Zip File
+                           </div>
+                           <div className='rounded-xl border-2 border-dashed border-border bg-card p-6 text-center'>
+                             <div className='flex flex-col items-center gap-3'>
+                               <Database className='size-8 text-muted-foreground/50' />
+                               <div>
+                                 <p className='text-sm font-medium'>
+                                  Drag & drop your zip file here
+                                 </p>
+                                 <p className='text-xs text-muted-foreground mt-1'>
+                                  or click to browse
+                                 </p>
+                               </div>
+                               <input
+                                type='file'
+                                accept='.zip'
+                                className='hidden'
+                                id='zip-upload'
+                               />
+                               <Button
+                                variant='outline'
+                                size='sm'
+                                className='h-8 gap-1.5 text-xs'
+                                onClick={() =>
+                                  document.getElementById('zip-upload')?.click()
+                                }
+                               >
+                                <Download className='size-3.5' />
+                               Browse Files
+                               </Button>
+                             </div>
+                           </div>
+                         </div>
+
+                         {/* Github Repo */}
+                         <div className='space-y-3'>
+                           <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
+                            Github Repository
+                           </div>
+                           <div className='space-y-2'>
+                             <Input
+                              placeholder='https://github.com/org/repo'
+                              className='h-9 text-sm'
+                             />
+                             <div className='flex justify-end'>
+                               <Button size='sm' className='h-8 gap-1.5 text-xs'>
+                                <ExternalLink className='size-3.5' />
+                               Connect Repo
+                               </Button>
+                             </div>
+                           </div>
+                         </div>
+                       </>
+                     ) : (
+                       <div className='rounded-xl border bg-card px-4 py-10 text-center'>
+                        <Shield className='mx-auto size-8 text-muted-foreground/50 mb-2' />
                         <p className='text-sm font-medium'>
-                          {user.first_name} {user.last_name}
+                         Access Restricted
                         </p>
-                        <p className='text-xs text-muted-foreground'>
-                          {user.role}
+                        <p className='text-xs text-muted-foreground mt-1'>
+                         Only developers and admins can view source code.
                         </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 5. Testing Comment Box */}
-            <div className='space-y-3'>
-              <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
-                Testing Comment
-              </div>
-              <div className='rounded-xl border bg-card p-4'>
-                <Textarea
-                  placeholder='Add testing notes, feedback, or observations...'
-                  value={comment}
-                  onChange={(e) => {
-                    setComment(e.target.value)
-                    if (saved) setSaved(false)
-                  }}
-                  className='min-h-25 resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0'
-                />
-                <div className='mt-3 flex items-center justify-between border-t pt-3'>
-                  <span className='text-xs text-muted-foreground'>
-                    {saved ? 'Comment saved!' : ''}
-                  </span>
-                  <Button
-                    size='sm'
-                    className='h-8 gap-1.5 text-xs'
-                    onClick={handleSave}
-                    disabled={!comment.trim()}
-                  >
-                    {saved ? 'Saved' : 'Save Comment'}
-                  </Button>
-                </div>
-              </div>
-            </div>
+                       </div>
+                     )}
+                   </TabsContent>
+                 </Tabs>
+               </div>
           </div>
         </div>
       </div>

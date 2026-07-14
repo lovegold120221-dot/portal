@@ -20,7 +20,8 @@ create table if not exists public.users (
   status text not null default 'active' check (status in ('active', 'inactive', 'invited', 'suspended')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  clerk_user_id text unique
+  clerk_user_id text unique,
+  is_superuser boolean not null default false
 );
 
 create index if not exists idx_users_role on public.users(role);
@@ -67,7 +68,7 @@ create policy "Users are deletable by admins"
 create table if not exists public.apps (
   name text primary key,
   icon text not null,
-  description text not null default '',
+  desc text not null default '',
   color text not null default '',
   url text not null default '',
   downloads jsonb not null default '[]',
