@@ -1021,7 +1021,7 @@ function AppDetailsPanel({
 
                    {/* ===== Source Code Tab ===== */}
                    <TabsContent value='code' className='mt-4 space-y-3'>
-                     {isDevOrAdmin ? (
+                     {canManageApps ? (
                        <>
                          {/* Zip Upload */}
                          <div className='space-y-3'>
