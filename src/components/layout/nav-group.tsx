@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -28,23 +28,38 @@ import {
   type NavLink,
   type NavGroup as NavGroupProps,
 } from './types'
-import type { ChatUser } from '@/features/chats/data/chat-types'
-import { conversations as rawConversations } from '@/features/chats/data/convo.json'
-
-const conversations = rawConversations as ChatUser[]
-const totalChatMessages = conversations.reduce(
-  (sum, user) => sum + user.messages.length,
-  0
-)
+import { useUser } from '@clerk/react'
+import { listConversations } from '@/lib/supabase-chats'
 
 export function NavGroup({ title, items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
   const href = useLocation({ select: (location) => location.href })
+  const { user: clerkUser } = useUser()
+  const [chatCount, setChatCount] = useState(0)
+
+  useEffect(() => {
+    if (!clerkUser?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setChatCount(0)
+      return
+    }
+    let active = true
+    listConversations(clerkUser.id)
+      .then((c) => {
+        if (active) setChatCount(c.length)
+      })
+      .catch(() => {
+        if (active) setChatCount(0)
+      })
+    return () => {
+      active = false
+    }
+  }, [clerkUser?.id])
 
   // Apply dynamic badge to Chats item
   const itemsWithBadges = items.map((item) => {
-    if (item.title === 'Chats' && totalChatMessages > 0) {
-      return { ...item, badge: String(totalChatMessages) }
+    if (item.title === 'Chats' && chatCount > 0) {
+      return { ...item, badge: String(chatCount) }
     }
     return item
   })
