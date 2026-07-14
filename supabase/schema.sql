@@ -68,7 +68,7 @@ create policy "Users are deletable by admins"
 create table if not exists public.apps (
   name text primary key,
   icon text not null,
-  desc text not null default '',
+  description text not null default '',
   color text not null default '',
   url text not null default '',
   downloads jsonb not null default '[]',
