@@ -440,7 +440,7 @@ export function Apps() {
                           </div>
                           <div className='space-y-2'>
                             <Label>Icon</Label>
-                            <div className='flex flex-wrap gap-2'>
+                 <div className='flex flex-wrap gap-2'>
                               {iconOptions.map((opt) => (
                                 <button
                                   key={opt.name}
@@ -905,79 +905,108 @@ function AppDetailsPanel({
               <h1 className='text-2xl font-bold tracking-tight'>{app.name}</h1>
             </div>
 
-            {/* Status */}
-            <div className='space-y-3'>
-              <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
-                Status
-              </div>
-              <div className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'>
-                <div
-                  className={`rounded px-3 py-1 text-xs font-semibold ${
-                    statusColors[app.status ?? ''] ||
-                    'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  {app.status || 'Unknown'}
+
+              <Tabs defaultValue='status' className='w-full'>
+                <TabsList className='grid w-full grid-cols-3'>
+                  <TabsTrigger value='status'>Status</TabsTrigger>
+                  <TabsTrigger value='users'>Users</TabsTrigger>
+                  <TabsTrigger value='code'>
+                    <Code2 className='mr-1.5 size-3.5' />
+                  Source Code
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value='status' className='mt-4 space-y-3'>
+                  <div className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'>
+                    <div
+                    className={`rounded px-3 py-1 text-xs font-semibold ${
+                      statusColors[app.status ?? ''] ||
+                        'bg-muted text-muted-foreground'
+                    }`}
+                    >
+                      {app.status || 'Unknown'}
+                    </div>
+                    <span className='text-sm text-muted-foreground'>
+                      {app.status === 'Stable'
+                        ? 'Production ready'
+                        : app.status === 'Beta'
+                          ? 'Feature complete, testing'
+                          : app.status === 'Alpha'
+                            ? 'Early development'
+                            : 'Status not set'}
+                    </span>
+                  </div>
+                </TabsContent>
+                <TabsContent value='users' className='mt-4 space-y-3'>
+                  {appAssignees[app.name] && appAssignees[app.name].length > 0 ? (
+                    <div className='space-y-2'>
+                      {appAssignees[app.name].map((user) => (
+                        <div
+                        key={user.id}
+                        className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'
+                        >
+                          <div className='flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary'>
+                            {user.first_name[0]}
+                            {user.last_name[0]}
+                          </div>
+                          <div className='flex-1'>
+                            <p className='text-sm font-medium'>
+                              {user.first_name} {user.last_name}
+                            </p>
+                            <p className='text-xs text-muted-foreground'>
+                              {user.role}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className='rounded-xl border bg-card px-4 py-6 text-center'>
+                      <p className='text-sm text-muted-foreground'>
+                      No users assigned
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+                <TabsContent value='code' className='mt-4 space-y-3'>
+                  <div className='rounded-xl border bg-card overflow-hidden'>
+                    <div className='flex items-center justify-between border-b px-4 py-2'>
+                      <span className='text-xs text-muted-foreground'>
+                        app.eburon.ai
+                      </span>
+                      <Button
+                      variant='ghost'
+                      size='sm'
+                      className='h-6 gap-1 text-[10px]'
+                      asChild
+                      >
+                        <a href={app.url} target='_blank' rel='noopener noreferrer'>
+                          <ExternalLink className='size-3' />
+                        Open
+                        </a>
+                      </Button>
+                    </div>
+                    <div className='bg-zinc-950 p-4 font-mono text-xs text-zinc-300 overflow-x-auto'>
+                      <pre className='leading-relaxed'>
+                        <code>{`<div className="app-container">
+  <header className="app-header">
+    <Logo />
+    <nav>...</nav>
+  </header>
+  <main>
+    <Dashboard />
+    <Assistant />
+  </main>
+</div>`}</code>
+                      </pre>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+              <div className='space-y-3'>
+                <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
+                 Assign Developers & Admins
                 </div>
-                <span className='text-sm text-muted-foreground'>
-                  {app.status === 'Stable'
-                    ? 'Production ready'
-                    : app.status === 'Beta'
-                      ? 'Feature complete, testing'
-                      : app.status === 'Alpha'
-                        ? 'Early development'
-                        : 'Status not set'}
-                </span>
-              </div>
-            </div>
-
-            {/* 1. Description Card */}
-            <div className='relative rounded-xl border bg-card p-6'>
-              <Button
-                variant='ghost'
-                size='icon'
-                className='absolute top-4 right-4 size-7 text-muted-foreground hover:text-foreground'
-                onClick={onClose}
-              >
-                <X className='size-4' />
-              </Button>
-              <div className='mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase'>
-                Description
-              </div>
-              <p className='mb-5 text-[15px] leading-relaxed text-foreground/90'>
-                {app.desc}
-              </p>
-              <Button
-                variant='outline'
-                className='h-9 gap-2 border-muted-foreground/20 text-xs font-medium hover:bg-accent'
-                asChild
-              >
-                <a href={app.url} target='_blank' rel='noopener noreferrer'>
-                  <ExternalLink className='size-3.5' />
-                  Open
-                </a>
-              </Button>
-            </div>
-
-            {/* 2. Developer */}
-            <div className='space-y-3'>
-              <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
-                Developer
-              </div>
-              <div className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'>
-                <div className='flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary'>
-                  EA
-                </div>
-                <span className='text-sm font-medium'>Emil Alvaro</span>
-              </div>
-            </div>
-
-            {/* 3. Assign Developers & Admins */}
-            <div className='space-y-3'>
-              <div className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
-                Assign Developers & Admins
-              </div>
-              <div className='flex flex-wrap gap-2'>
+                 <div className='flex flex-wrap gap-2'>
                 {devUsers.map((user) => {
                   const assigned = (appAssignees[app.name] || []).some(
                     (u) => u.id === user.id
