@@ -615,72 +615,74 @@ export function Models() {
 
               <div className='max-h-[calc(100vh-320px)] overflow-y-auto'>
                 <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-                  {filtered.map((model) => (
-                    <Card key={model.name} className='hover:shadow-md'>
-                      <CardHeader className='p-4 pb-2'>
-                        <div className='flex items-start justify-between'>
-                          <div className='flex items-center gap-3'>
-                            <div className='flex size-10 items-center justify-center rounded-lg bg-linear-to-br from-purple-500 to-blue-600 p-2 text-white'>
-                              <model.icon className='size-5' />
+                    {filtered.map((model) => (
+                      <Card key={model.name} className='hover:shadow-md'>
+                        <CardHeader>
+                          <div className='flex items-start justify-between pt-4'>
+                            <div className='flex items-center gap-3'>
+                              <div className='flex size-10 items-center justify-center rounded-lg bg-linear-to-br from-purple-500 to-blue-600 p-2 text-white'>
+                                <model.icon className='size-5' />
+                              </div>
+                              <div>
+                                <CardTitle className='text-sm font-semibold'>
+                                  {model.name}
+                                </CardTitle>
+                                <CardDescription className='text-xs'>
+                                  {model.size} · {model.context} context
+                                </CardDescription>
+                              </div>
                             </div>
-                            <div>
-                              <CardTitle className='text-sm font-semibold'>
-                                {model.name}
-                              </CardTitle>
-                              <CardDescription className='text-xs'>
-                                {model.size} · {model.context} context
-                              </CardDescription>
+                            <Button
+                              variant='ghost'
+                              size='icon'
+                              className='size-8'
+                              asChild
+                            >
+                              <a
+                                href={model.ollamaUrl}
+                                target='_blank'
+                                rel='noopener noreferrer'
+                              >
+                                <ExternalLink className='size-4' />
+                              </a>
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className='pb-4'>
+                            <p className='mb-3 text-xs text-muted-foreground'>
+                              {model.description}
+                            </p>
+                            <div className='flex flex-wrap gap-1.5'>
+                              {model.capabilities.map((cap) => (
+                                <Badge
+                                  key={cap}
+                                  variant='outline'
+                                  className={`text-[10px] ${capColors[cap] || ''}`}
+                                >
+                                  {cap}
+                                </Badge>
+                              ))}
+                            </div>
+                            <div className='mt-3'>
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                className='w-full text-xs'
+                                onClick={() => {
+                                  navigator.clipboard.writeText(
+                                    `ollama run eburonpro/${model.name}`
+                                  )
+                                }}
+                              >
+                                <Terminal className='me-1.5 size-3' />
+                               ollama run eburonpro/{model.name}
+                              </Button>
                             </div>
                           </div>
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            className='size-8'
-                            asChild
-                          >
-                            <a
-                              href={model.ollamaUrl}
-                              target='_blank'
-                              rel='noopener noreferrer'
-                            >
-                              <ExternalLink className='size-4' />
-                            </a>
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className='p-4 pt-2'>
-                        <p className='mb-3 text-xs text-muted-foreground'>
-                          {model.description}
-                        </p>
-                        <div className='flex flex-wrap gap-1.5'>
-                          {model.capabilities.map((cap) => (
-                            <Badge
-                              key={cap}
-                              variant='outline'
-                              className={`text-[10px] ${capColors[cap] || ''}`}
-                            >
-                              {cap}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className='mt-3'>
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            className='w-full text-xs'
-                            onClick={() => {
-                              navigator.clipboard.writeText(
-                                `ollama run eburonpro/${model.name}`
-                              )
-                            }}
-                          >
-                            <Terminal className='me-1.5 size-3' />
-                            ollama run eburonpro/{model.name}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    ))}
                 </div>
 
                 {filtered.length === 0 && (
