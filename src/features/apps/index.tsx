@@ -157,8 +157,6 @@ const statusColors: Record<string, string> = {
     'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
 }
 
-const emilAlvaro = allUsers.find((u) => u.email === 'emil.alvaro@eburon.ai')
-
 const devUsers = allUsers.filter(
   (u) => u.role === 'developer' || u.role === 'admin'
 )
@@ -180,27 +178,12 @@ export function Apps() {
   const [selectedApp, setSelectedApp] = useState<EburonApp | null>(null)
   const [services, setServices] = useState<Service[]>([])
   const [loadingServices, setLoadingServices] = useState(true)
-  const [appAssignees, setAppAssignees] = useState<Record<string, User[]>>(
-    Object.fromEntries(
-      defaultApps.map((app) => [app.name, emilAlvaro ? [emilAlvaro] : []])
-    )
-  )
-
   useEffect(() => {
     let active = true
     Promise.all([getServices(), getApps()]).then(([svcData, appData]) => {
       if (!active) return
       setServices(svcData)
       setApps(appData)
-      setAppAssignees((prev) => {
-        const next = { ...prev }
-        appData.forEach((app) => {
-          if (!next[app.name]) {
-            next[app.name] = emilAlvaro ? [emilAlvaro] : []
-          }
-        })
-        return next
-      })
       setLoadingServices(false)
     })
     return () => {
@@ -214,19 +197,6 @@ export function Apps() {
       prev.map((s) => (s.slug === slug ? { ...s, connected: next } : s))
     )
     await setServiceConnected(slug, next)
-  }
-
-  const toggleAssignUser = (appName: string, user: User) => {
-    setAppAssignees((prev) => {
-      const current = prev[appName] || []
-      const exists = current.some((u) => u.id === user.id)
-      return {
-        ...prev,
-        [appName]: exists
-          ? current.filter((u) => u.id !== user.id)
-          : [...current, user],
-      }
-    })
   }
 
   const filteredApps = [...apps]
@@ -254,10 +224,6 @@ export function Apps() {
       downloads: defaultDownloads,
     }
     setApps((prev) => [...prev, newApp])
-    setAppAssignees((prev) => ({
-      ...prev,
-      [newApp.name]: emilAlvaro ? [emilAlvaro] : [],
-    }))
     addApp(newApp)
     setNewName('')
     setNewDesc('')
@@ -311,11 +277,6 @@ export function Apps() {
   // ── Remove App ──────────────────────────────────────────
   const handleRemove = async (app: EburonApp) => {
     setApps((prev) => prev.filter((a) => a.name !== app.name))
-    setAppAssignees((prev) => {
-      const next = { ...prev }
-      delete next[app.name]
-      return next
-    })
     if (selectedApp?.name === app.name) setSelectedApp(null)
     await deleteApp(app.name)
   }
@@ -340,8 +301,6 @@ export function Apps() {
             app={selectedApp}
             statusColors={statusColors}
             devUsers={devUsers}
-            appAssignees={appAssignees}
-            onToggleAssign={toggleAssignUser}
             onClose={closeDetails}
             canManageApps={canManageApps}
             onEdit={openEdit}
@@ -794,8 +753,6 @@ type AppDetailsPanelProps = {
   app: EburonApp
   statusColors: Record<string, string>
   devUsers: User[]
-  appAssignees: Record<string, User[]>
-  onToggleAssign: (appName: string, user: User) => void
   onClose: () => void
   canManageApps: boolean
   onEdit: (app: EburonApp) => void
@@ -804,7 +761,6 @@ type AppDetailsPanelProps = {
 
 function AppDetailsPanel({
   app,
-  appAssignees,
   onClose,
   canManageApps,
   onEdit,
@@ -914,7 +870,7 @@ function AppDetailsPanel({
                      <TabsTrigger value='information'>
                        Information
                      </TabsTrigger>
-                     <TabsTrigger value='users'>Users</TabsTrigger>
+                     <TabsTrigger value='admin'>Admin</TabsTrigger>
                      <TabsTrigger value='code'>
                        <Code2 className='mr-1.5 size-3.5' />
                        Source Code
@@ -986,38 +942,16 @@ function AppDetailsPanel({
                      </div>
                    </TabsContent>
 
-                   {/* ===== Users Tab ===== */}
-                   <TabsContent value='users' className='mt-4 space-y-3'>
-                     {appAssignees[app.name] && appAssignees[app.name].length > 0 ? (
-                       <div className='space-y-2'>
-                         {appAssignees[app.name].map((user) => (
-                           <div
-                            key={user.id}
-                            className='flex items-center gap-3 rounded-xl border bg-card px-4 py-3'
-                           >
-                             <div className='flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary'>
-                               {user.first_name[0]}
-                               {user.last_name[0]}
-                             </div>
-                             <div className='flex-1'>
-                               <p className='text-sm font-medium'>
-                                 {user.first_name} {user.last_name}
-                               </p>
-                               <p className='text-xs text-muted-foreground'>
-                                 {user.role}
-                               </p>
-                             </div>
-                           </div>
-                         ))}
-                       </div>
-                     ) : (
-                       <div className='rounded-xl border bg-card px-4 py-6 text-center'>
-                         <p className='text-sm text-muted-foreground'>
-                          No users assigned
-                         </p>
-                       </div>
-                     )}
-                   </TabsContent>
+                    {/* ===== Admin Tab ===== */}
+                    <TabsContent value='admin' className='mt-4'>
+                      <div className='overflow-hidden rounded-xl border'>
+                        <iframe
+                          src={`https://eburon.ai/admin/${app.name.replace(/^Eburon\s+/i, '').toLowerCase().replace(/\s+/g, '-') || ''}`}
+                          title='Admin'
+                          className='h-[600px] w-full'
+                        />
+                      </div>
+                    </TabsContent>
 
                    {/* ===== Source Code Tab ===== */}
                    <TabsContent value='code' className='mt-4 space-y-3'>
